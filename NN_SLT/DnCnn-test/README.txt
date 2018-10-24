@@ -1,22 +1,24 @@
+×××××××××××××××编译DNCNN×××××××××××××××××
+1. 编译
+   运行build_vx.sh脚本：./build_vx.sh {bildroot的根目录} {工程名称}
+   
+   buildroot的根目录:代表与bootloader buildroot hardware output等文件夹所在的目录
+   工程名称：代表所编译的工程，目前所用的工程为mesong12b_skt_release
 
+2. 注意事项
+   编译成功后会在当前目录下生成一个bin_r文件夹，文件夹里面包含dncnn执行文件和若干对象文件（*.o）,需把dncnn拷贝到和run.sh同一目录下
 ×××××××××××××××执行DNCNN×××××××××××××××××
-1.切换到DnCnn-test的目录
- 命令：cd /.../DnCnn-test/DnCNN_int8
+1.运行run.sh
+  命令：./run.sh  
 
-2.运行run.sh
- 命令：./run.sh
-
-3.编译DnCnn
- 命令： ./build_vx.sh {drivers_dir} {toolchain} 
- (drivers_dir和toolchain两个参数根据自己的drivers和toolchain目录决定)
 *************说明×××××××××××××××××××××××××
-tip:
+1. run.sh脚本中，执行程序的第三个参数为时间阈值，默认值为1000，代表当模型的processGraph的时间超过1000ms时，认为是运行异常。
 
-1. run.sh脚本中“VNN_TIME”对应的timeout时间，默认值为1000，代表当模型的processGraph的时间超过1000ms时，认为是运行异常，则停止运行。
-
-2. run.sh脚本中“VNN_LOOP_TIME”对应模型循环次数，默认值为10000
+2. run.sh脚本中，执行程序的第四个参数为循环次数，默认值为10
 
 3. 如果DNCnn完整的运行返回值为0，若未能完全运行，则返回值为1
+
+4. 若运行失败，失败信息会保存在error_log.txt中
 
 
 ×××××××××××××××执行时间×××××××××××××××××××

@@ -424,12 +424,11 @@ static vsi_status vnn_PostProcessNeuralNetwork
 
 static vsi_status vnn_ProcessGraph
     (
-    vsi_nn_graph_t *graph
+    vsi_nn_graph_t *graph,int process_time,int loop_time
     )
 {
     vsi_status status;
     int32_t i,num,loop;
-    char *loop_s,*Num;
     FILE *fp;
     FILE *fp1;
     int j;
@@ -438,34 +437,19 @@ static vsi_status vnn_ProcessGraph
 
     status = VSI_FAILURE;
     loop = 1; /* default loop time is 1 */
-    loop_s = getenv("VNN_LOOP_TIME");
-    Num = getenv("VNN_TIME");
-    if (Num)
+    num = 0;
+    if (process_time)
      {
-        num = atoi(Num);
+        num = process_time;
      }
 
-    if (loop_s)
+    if (loop_time)
     {
-        loop = atoi(loop_s);
+        loop = loop_time;
     }
-#ifdef __linux__
-    struct timeval  sigStart, sigEnd, verStart, verEnd;
-    long int msVal,usVal;
-    gettimeofday( &verStart, 0 );
-#endif
     /* Verify graph */
     status = vsi_nn_VerifyGraph( graph );
     _CHECK_STATUS( status, final );
-
-#ifdef __linux__
-    gettimeofday( &verEnd, 0 );
-    msVal = 1000 * (verEnd.tv_sec - verStart.tv_sec) + (verEnd.tv_usec - verStart.tv_usec) / 1000;
-    usVal = 1000000 * (verEnd.tv_sec - verStart.tv_sec) + (verEnd.tv_usec - verStart.tv_usec);
-    printf("verify time:");
-    printf("  %ldms or %ldus\n", msVal, usVal);
-#endif
-
     /* Run graph */
 
     printf("Start run graph [%d] times...\n", loop);
@@ -479,6 +463,8 @@ static vsi_status vnn_ProcessGraph
     for (i = 0; i < loop; i++)
     {
 #ifdef __linux__
+        struct timeval  sigStart, sigEnd;
+        long int msVal,usVal;
         gettimeofday( &sigStart, 0 );
 #endif
         status = vsi_nn_RunGraph(graph);
@@ -495,25 +481,25 @@ static vsi_status vnn_ProcessGraph
 #endif
         if (msVal > num)
           {
-             printf("  Fatal error: process graph time is too long,maybe GPU has hang!!!!!!!!!!!!!!!!\n");
-             fp = fopen("error_log.txt","a+");
-             fprintf(fp,"  run the %u time,loop not end ! process Graph time is %ld ms.\n",(i+1),msVal);
-             fclose(fp);
-             exit(1);
+            printf("Fatal error:GPU hang!\n");
+            fp = fopen("error_log.txt","a+");
+            fprintf(fp,"run the %u time,loop not end ! process Graph time is %ld ms.\n",(i+1),msVal);
+            fclose(fp);
+            exit(1);
           }
         /* Save all output tensor data to txt file */
         vnn_SaveOutputData(graph);
         ctx = oragin("output0_640_640_3.txt");
-        for (j=0;j<16;j++)
+       for (j=0;j<16;j++)
         {
-	  if (cty.buf[j] != ctx.buf[j])
-           {
-		 printf ("  Fatal error: when toop to %u times,Accurary error!!!!!!!!!!!!!\n",(i+1));
-                 fp = fopen("error_log.txt","a+");
-                 fprintf(fp,"  Fatal error: when toop %u times,Accurary error\n",(i+1));
-                 fclose(fp);
-		 exit(1);
-	   }
+            if (cty.buf[j] != ctx.buf[j])
+            {
+                printf("Fatal error:Accurary error!\n");
+                fp = fopen("error_log.txt","a+");
+                fprintf(fp,"Fatal error: when toop %u times,Accurary error\n",(i+1));
+                fclose(fp);
+                exit(1);
+            }
         }
      }
 
@@ -554,30 +540,31 @@ final:
 int main
     (
     int argc,
-    char **argv
+    char **argv[]
     )
 {
     vsi_status status;
     vsi_nn_graph_t *graph;
     const char *data_name = NULL;
     const char *image_name = NULL;
+    const char *a;
+    const char *b;
+    int        loop_time=0;
+    int        process_time=0;
     FILE *fp;
-
     status = VSI_FAILURE;
-    if (argc != 3)
+    if (argc != 5)
     {
         printf("Usage:%s data_file_name image_file_name\n", argv[0]);
         return -1;
     }
-
     data_name = (const char *)argv[1];
     image_name = (const char *)argv[2];
+    a = (const char *)argv[3];
+    b = (const char *)argv[4];
+    process_time = atoi(a);
+    loop_time = atoi(b);
 
-#ifdef __linux__
-    struct timeval tmsStart, tmsEnd;
-    long int msVal,usVal;
-    gettimeofday( &tmsStart, 0 );
-#endif
 
     /* Create the neural network */
     graph = vnn_CreateNeuralNetwork( data_name );
@@ -587,16 +574,8 @@ int main
     status = vnn_PreProcessNeuralNetwork( graph, image_name );
     _CHECK_STATUS( status, final );
 
-#ifdef __linux__
-    gettimeofday( &tmsEnd, 0 );
-    msVal = 1000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec) / 1000;
-    usVal = 1000000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec);
-    printf("creatnetwork time:");
-    printf("   %ldms or %ldus\n", msVal, usVal);
-#endif
-
     /* Verify and Process graph */
-    status = vnn_ProcessGraph( graph );
+    status = vnn_ProcessGraph( graph, process_time,loop_time );
     _CHECK_STATUS( status, final );
 
     if (VNN_APP_DEBUG)
@@ -614,7 +593,7 @@ if (VSI_FAILURE == status)
    }
 else if (VSI_SUCCESS == status)
     {
-    printf("  all process is over\n");
+    printf("TEST PASS  \n");
     fp = fopen("error_log.txt","a+");
     fprintf(fp,"  Case end successfully.\n\n\n");
     fclose(fp);

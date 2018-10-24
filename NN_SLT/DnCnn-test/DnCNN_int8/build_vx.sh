@@ -20,15 +20,12 @@ if [ -z $2 ]; then
 	exit 1
 fi
 
-#export AQROOT=/mnt/fileroot/xingwei.zhou/work/pxp_bringup/pxp_driver/baseDriver
-export AQROOT=$1
-export AQARCH=$AQROOT/arch/XAQ2
-export SDK_DIR=$AQROOT/build/sdk
-export VIVANTE_SDK_DIR=$SDK_DIR
-export VIVANTE_SDK_INC=$SDK_DIR/include
-export VIVANTE_SDK_LIB=$SDK_DIR/drivers
-export OVXLIB_DIR=$AQROOT/acuity-ovxlib-dev
-
+echo $1
+echo $2
+export OVX_DIR=$1/output/$2
+export SDK_LIB=$1/output/$2/build/npu
+export AQROOT=$SDK_LIB
+export LINUX_ROOT=$1
 case "$ARCH" in
 
 arm)
@@ -41,10 +38,6 @@ arm)
     export LIB_DIR=$2/libc/lib
 
 
-#    export KERNEL_DIR=/home/software/Linux/linux-2.6.21-arm1
- #   export CROSS_COMPILE=arm-none-linux-gnueabi-
-#    export TOOLCHAIN=/home/software/Linux/toolchain
-#    export LIB_DIR=$TOOLCHAIN/arm-none-linux-gnueabi/libc/usr/lib
 ;;
 
 arm-fsl)
@@ -54,142 +47,9 @@ arm-fsl)
     export CPU_ARCH=armv8-a
     export FIXED_ARCH_TYPE=arm64
     export CROSS_COMPILE=aarch64-linux-gnu-
-    export TOOLCHAIN=$2/bin
-    export LIB_DIR=$2/aarch64-linux-gnu/libc/lib
+    export TOOLCHAIN=$1/toolchain/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin
+    export LIB_DIR=$TOOLCHAIN/aarch64-linux-gnu/libc/lib
 	
-;;
-
-arm-yocto)
-    ARCH=arm
-    export ARCH_TYPE=$ARCH
-    export CPU_TYPE=cortex-a9
-    export CPU_ARCH=armv7-a
-    export FIXED_ARCH_TYPE=arm-yocto
-
-    export KERNEL_DIR=/home/software/Linux/YOCTO/L3.10.9_1.0.0_alpha_20131009
-    export TOOLCHAIN=/home/software/Linux/YOCTO/poky/sysroots/x86_64-pokysdk-linux/usr
-    export PATH=$TOOLCHAIN/bin:$TOOLCHAIN/bin/cortexa9hf-vfp-neon-poky-linux-gnueabi:$PATH
-    export CROSS_COMPILE=arm-poky-linux-gnueabi-
-    export ROOTFS=/home/software/Linux/YOCTO/x11-20130912221643
-    export ROOTFS_USR=$ROOTFS/usr
-    export X11_ARM_DIR=$ROOTFS/usr
-    export CFLAGS="-D__ARM_PCS_VFP --sysroot=$ROOTFS"
-    export LFLAGS="--sysroot=$ROOTFS"
-    export PFLAGS="--sysroot=$ROOTFS"
-    export FPU=vfp
-    export FLOAT_ABI=hard
-    BUILD_YOCTO_DRI_BUILD=1
-;;
-
-unicore)
-    export ARCH_TYPE=unicore
-    export CPU_TYPE=0
-    export CPU_ARCH=0
-    export FIXED_ARCH_TYPE=unicore
-
-    export KERNEL_DIR=/home/software/Linux/linux-2.6.32
-    export CROSS_COMPILE=unicore32-linux-
-    export TOOLCHAIN=/home/software/Linux/uc4-1.0-beta-hard-RHELAS5
-    export LIB_DIR=$TOOLCHAIN/unicore32-linux/lib
-;;
-
-tensilica)
-    export ARCH_TYPE=$ARCH
-    export CPU_TYPE=0
-    export CPU_ARCH=0
-    export FIXED_ARCH_TYPE=tensilica
-
-#    KERNEL_DIR=/home/software/Linux/linux-2.6.24.7
-    CROSS_COMPILE=xtensa_venus-linux-
-    TOOLCHAIN=/home/software/Linux/xtensa/staging_dir/usr
-    LIB_DIR=$TOOLCHAIN/lib
-;;
-
-ppc-be)
-    export ARCH_TYPE=powerpc
-    export CPU_TYPE=440
-
-    # '-be' mens big-endian
-    export FIXED_ARCH_TYPE=ppc-be
-
-    # set ENDIANNESS to build driver with little-endian
-    #export ENDIANNESS=-mlittle-endian
-
-#    KERNEL_DIR=/home/software/Linux/linux-2.6.27
-    export CROSS_COMPILE=ppc_4xx-
-    export TOOLCHAIN=/home/software/eldk/usr
-    export DEPMOD=$TOOLCHAIN/bin/depmod.pl
-    export LIB_DIR=/home/software/eldk/ppc_4xx/lib
-
-;;
-
-mips-le)
-
-    export ARCH_TYPE=$ARCH
-    export CPU_TYPE=0
-    export ARCH_TYPE=mips
-    export CPU_ARCH=34kf
-
-    #
-    # to select the right ES20 pre-built files
-    #
-    export FIXED_ARCH_TYPE=mips-le
-
-    #
-    # to build driver with little endin
-    #
-    export ENDIANNESS=-mel
-
-    export KERNEL_DIR=/home/software/Linux/linux-2.6.19-mips.le
-    export CROSS_COMPILE=mips-linux-gnu-
-    export TOOLCHAIN=/home/software/Linux/mips-4.4-5
-    export LIB_DIR=$TOOLCHAIN/mips-linux-gnu/libc/el/usr/lib
-;;
-
-mips-be)
-
-    export ARCH_TYPE=$ARCH
-    export CPU_TYPE=0
-    export ARCH_TYPE=mips
-    export CPU_ARCH=34kf
-
-    #
-    # to select the right ES20 pre-built files
-    #
-    export FIXED_ARCH_TYPE=mips-be
-
-    #
-    # to build driver with little endin
-    #
-    export ENDIANNESS=-meb
-
-    export KERNEL_DIR=/home/software/Linux/linux-2.6.19-mips.be
-    export CROSS_COMPILE=mips-linux-gnu-
-    export TOOLCHAIN=/home/software/Linux/mips-4.4-5
-    export LIB_DIR=$TOOLCHAIN/lib
-;;
-
-mips-le-24kc)
-    export ARCH_TYPE=mips
-    export CPU_ARCH=24kc
-    export CPU_TYPE=0
-
-    export FIXED_ARCH_TYPE=mips-le-24kc
-
-    #
-    #  set build optons: little-endian
-    #
-    export ENDIANNESS=-mel
-
-    export KERNEL_DIR=/home/software/Linux/linux-2.6.19-mips.le
-    export CROSS_COMPILE=mipsel-linux-gnu-
-    export TOOLCHAIN=/home/software/Linux/tools-2.6.27
-    export LIB_DIR=$TOOLCHAIN/lib
-;;
-
-*)
-   echo "ERROR: Unknown $ARCH, or not support so far"
-   exit 1
 ;;
 
 esac;
