@@ -12,11 +12,11 @@ ARCH=arm-fsl
  #   ARCH=$1
 #fi
 if [ -z $1 ]; then
-    echo "error:drivers path not set"
+    echo "error:buildroot path not set"
 	exit 1
 fi
 if [ -z $2 ]; then
-    echo "error:toolchain path not set"
+    echo "error:project name not set"
 	exit 1
 fi
 

@@ -1,4 +1,6 @@
 ×××××××××××××××编译yoloface×××××××××××××××××
+0. 必须保证工程在编译时menuconfig中打开了opencv（Target package/Libraries/Graphics/opencv-2.4）的开关
+
 1. 编译
    运行build_vx.sh脚本：./build_vx.sh {bildroot的根目录} {工程名称}
    
