@@ -1,11 +1,10 @@
 
-CC=$(TARGET_OUTPUT_DIR)/../../toolchain/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc
-CROSS_COMPILE=$(TARGET_OUTPUT_DIR)/../../toolchain/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/aarch64-linux-gnu-
+CROSS_COMPILE=aarch64-linux-gnu-
 
 
-SDK_LIB=$(TARGET_OUTPUT_DIR)/build/npu/
-OVX_DIR=$(TARGET_OUTPUT_DIR)
-LIB_DIR=$(TARGET_OUTPUT_DIR)/../../toolchain/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/aarch64-linux-gnu/libc/lib
+SDK_LIB=../../build/npu
+OVX_DIR=../..
+LIB_DIR=$(CC)/libc/lib
 
 INCLUDE += -I$(SDK_LIB)/sdk/inc -I$(SDK_LIB)/applib/ovxinc/include -I$(OVX_DIR)/build/libjpeg-9b
 CFLAGS += $(INCLUDE)
