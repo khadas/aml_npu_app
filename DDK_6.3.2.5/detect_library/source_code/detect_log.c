@@ -13,10 +13,10 @@ void det_set_log_level(det_debug_level_t level,det_log_format_t output_format)
 
     if (log_level) {
         g_log_level = (det_debug_level_t)atoi(log_level);
-        LOGE("Set log level by environmental variable.level=%d",g_log_level);
+        LOGW("Set log level by environmental variable.level=%d",g_log_level);
     } else {
         g_log_level = level;
-        LOGE("Set log level=%d",g_log_level);
+        LOGW("Set log level=%d",g_log_level);
     }
 	return;
 }
@@ -30,7 +30,7 @@ static int _check_log_level(det_debug_level_t level)
         env_log_level = (det_debug_level_t)atoi(log_level);
         if (env_log_level != g_log_level) {
             g_log_level = env_log_level;
-            LOGE("Set log level by environmental variable..level=%d",g_log_level);
+            LOGW("Set log level by environmental variable..level=%d",g_log_level);
         }
     }
 

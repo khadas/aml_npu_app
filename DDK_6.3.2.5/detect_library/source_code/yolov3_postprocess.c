@@ -285,6 +285,7 @@ void yolov3_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
             predictions[output_cnt]= tmp1*fl;
             output_cnt++;
         }
+        vsi_nn_Free(tensor_data);
 	}
 
     float biases[18] = {10/8., 13/8., 16/8., 30/8., 33/8., 23/8., 30/16., 61/16., 62/16., 45/16., 59/16., 119/16., 116/32., 90/32., 156/32., 198/32., 373/32., 326/32.};
@@ -305,7 +306,6 @@ void yolov3_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
 	free(boxes);
 	boxes = NULL;
 
-	if (tensor_data) vsi_nn_Free(tensor_data);
     if (predictions) free(predictions);
 
 	for (j = 0; j < box1*(1+4+16); ++j) {

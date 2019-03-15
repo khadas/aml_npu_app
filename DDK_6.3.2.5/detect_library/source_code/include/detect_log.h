@@ -3,7 +3,7 @@
 
 #include "nn_detect_common.h"
 
-#define DEBUG_BUFFER_LEN 1024
+#define DEBUG_BUFFER_LEN 1280
 #define LOGE( fmt, ... ) \
     detect_nn_LogMsg(DET_DEBUG_LEVEL_ERROR, "E [%s:%d]" fmt, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define LOGW( fmt, ... ) \

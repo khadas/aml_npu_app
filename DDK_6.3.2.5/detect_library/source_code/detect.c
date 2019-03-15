@@ -188,6 +188,8 @@ static void check_and_set_dev_type()
 	int length = fread(buffer,1,len,fp);
 	index = find_string_index(buffer, "290", length);
 
+	LOGD("Read Cpuinfo:%s\n",buffer);
+	LOGD("290 index=%d",index);
 	switch (buffer[index+3]) {
 		case 'a':
 			LOGI("set_dev_type REVA");
@@ -229,7 +231,7 @@ det_status_t det_set_model(det_model_type modelType)
 		_SET_STATUS_(ret, DET_STATUS_CREATE_NETWORK_FAIL, exit);
 	}
 
-	LOGI("Start vsi_nn_VerifyGraph");
+	LOGP("Start vsi_nn_VerifyGraph");
 	status = vsi_nn_VerifyGraph(net->graph);
 	if (status) {
 		LOGE("Model vxVerifyGraph fail!");
@@ -305,7 +307,7 @@ det_status_t det_get_result(pDetResult resultData, det_model_type modelType)
 	vsi_status status = VSI_FAILURE;
 	vsi_nn_graph_t *graph = net->graph;
 
-	LOGI("Start Vsi_nn_RunGraph");
+	LOGP("Start Vsi_nn_RunGraph");
 	//net->status = NETWORK_PROCESSING;
 	status = vsi_nn_RunGraph(graph);
 	net->status = NETWORK_INIT;
@@ -314,7 +316,7 @@ det_status_t det_get_result(pDetResult resultData, det_model_type modelType)
 		_SET_STATUS_(ret, DET_STATUS_PROCESS_NETWORK_FAIL, exit);
 	}
 
-	LOGI("Start Postprocess");
+	LOGP("Start Postprocess");
 	model_postprocess[modelType](graph, resultData);
 
 exit:
