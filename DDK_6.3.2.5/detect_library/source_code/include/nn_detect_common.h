@@ -88,7 +88,8 @@ typedef enum {
 	DET_DEEPLAB_V1,
 	DET_DEEPLAB_V2,
 	DET_DEEPLAB_V3,
-  DET_BUTT,
+        DET_FACENET,
+        DET_BUTT,
 } det_model_type;
 
 /// point definition
@@ -153,6 +154,7 @@ typedef enum{
 
 typedef struct _DetectResult {
 	int  detect_num;
+        float facenet_result[128];
 	det_classify_result_t result_name[MAX_DETECT_NUM];
 	det_position_float_t point[MAX_DETECT_NUM];
 }DetectResult,*pDetResult;

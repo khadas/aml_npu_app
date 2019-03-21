@@ -21,6 +21,10 @@
 #include "yolov3_preprocess.h"
 #include "yolov3_postprocess.h"
 
+#include "vnn_facenet7d.h"
+#include "vnn_facenet88.h"
+#include "facenet_process.h"
+
 #define _SET_STATUS_(status, stat, lbl) do {\
 	status = stat; \
 	goto lbl; \
@@ -49,7 +53,7 @@ typedef vsi_nn_graph_t * (*network_create)(const char * data_file_name, vsi_nn_c
 typedef void (*network_release)(vsi_nn_graph_t * graph, vsi_bool release_ctx);
 
 dev_type g_dev_type = DEV_REVA;
-det_network_t network[DET_BUTT];
+det_network_t network[DET_BUTT]={0};
 
 network_create model_create[DET_BUTT][DEV_BUTT] = {
 	{vnn_CreateYoloFace7d, vnn_CreateYoloFace88},
@@ -63,6 +67,7 @@ network_create model_create[DET_BUTT][DEV_BUTT] = {
 	{NULL,NULL},
 	{NULL,NULL},
 	{NULL,NULL},
+	{vnn_CreateFacenet7d,vnn_CreateFacenet88},
 };
 network_release model_release[DET_BUTT][DEV_BUTT] = {
 	{vnn_ReleaseYoloFace7d, vnn_ReleaseYoloFace88},
@@ -76,6 +81,7 @@ network_release model_release[DET_BUTT][DEV_BUTT] = {
 	{NULL,NULL},
 	{NULL,NULL},
 	{NULL,NULL},
+	{vnn_ReleaseFacenet7d,vnn_ReleaseFacenet88},
 };
 const char * data_file_name[DET_BUTT][DEV_BUTT]= {
 	{"/etc/nn_data/yolo_face_7D.export.data", "/etc/nn_data/yolo_face_88.export.data"},
@@ -89,6 +95,7 @@ const char * data_file_name[DET_BUTT][DEV_BUTT]= {
 	{NULL,NULL},
 	{NULL,NULL},
 	{NULL,NULL},
+	{"/etc/nn_data/faceNet_7D.export.data", "/etc/nn_data/faceNet_88.export.data"},
 };
 
 typedef void (*network_preprocess)(input_image_t imageData, uint8_t **input_data_ptr);
@@ -106,6 +113,7 @@ network_preprocess model_preprocess[DET_BUTT] = {
 	NULL,
 	NULL,
 	NULL,
+	facenet_preprocess,
 };
 
 network_postprocess model_postprocess[DET_BUTT] = {
@@ -120,6 +128,7 @@ network_postprocess model_postprocess[DET_BUTT] = {
 	NULL,
 	NULL,
 	NULL,
+	facenet_postprocess,
 };
 
 static det_status_t check_input_param(vsi_nn_graph_t*  graph, input_image_t imageData)
@@ -131,7 +140,8 @@ static det_status_t check_input_param(vsi_nn_graph_t*  graph, input_image_t imag
 	}
 
 	if (imageData.pixel_format != PIX_FMT_RGB888) {
-
+		LOGE("Current only support RGB888");
+		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
 
 	int width,height,channel;
@@ -188,7 +198,7 @@ static void check_and_set_dev_type()
 	int length = fread(buffer,1,len,fp);
 	index = find_string_index(buffer, "290", length);
 
-	LOGD("Read Cpuinfo:%s\n",buffer);
+	LOGD("Read Cpuinfo:\n%s\n",buffer);
 	LOGD("290 index=%d",index);
 	switch (buffer[index+3]) {
 		case 'a':
@@ -209,15 +219,17 @@ static void check_and_set_dev_type()
 
 det_status_t det_set_model(det_model_type modelType)
 {
+	LOGP("Enter, modeltype:%d", modelType);
+
 	int ret = DET_STATUS_OK;
 	vsi_status status = VSI_SUCCESS;
 	p_det_network_t net = &network[modelType];
 	if (net->status) {
-		LOGW("Model has been inited!");
+		LOGW("Model has been inited! modeltype:%d", modelType);
 		_SET_STATUS_(ret, DET_STATUS_OK, exit);
 	}
 
-	if (modelType > DET_YOLO_V3) {
+	if (modelType > DET_YOLO_V3 && modelType != DET_FACENET) {
 		LOGE("Model not support now!");
 		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
@@ -227,7 +239,7 @@ det_status_t det_set_model(det_model_type modelType)
 	LOGI("Start create Model");
 	net->graph = model_create[modelType][g_dev_type](data_file_name[modelType][g_dev_type],NULL);
 	if (NULL == net->graph) {
-		LOGE("Create model fail!");
+		LOGE("Create model fail! model_path=%s",data_file_name[modelType][g_dev_type]);
 		_SET_STATUS_(ret, DET_STATUS_CREATE_NETWORK_FAIL, exit);
 	}
 
@@ -240,14 +252,14 @@ det_status_t det_set_model(det_model_type modelType)
 	}
 
 	net->status = NETWORK_INIT;
-	LOGI("Create model success! modeltype:%d", modelType);
-
 exit:
+	LOGP("Leave, modeltype:%d", modelType);
 	return ret;
 }
 
 det_status_t det_get_model_size(det_model_type modelType, int *width, int *height, int *channel)
 {
+	LOGP("Enter, modeltype:%d", modelType);
 	int ret = DET_STATUS_OK;
 	p_det_network_t net = &network[modelType];
 	if (!net->status) {
@@ -260,11 +272,13 @@ det_status_t det_get_model_size(det_model_type modelType, int *width, int *heigh
 	*height = tensor->attr.size[1];
 	*channel = tensor->attr.size[2];
 exit:
+	LOGP("Leave, modeltype:%d", modelType);
 	return ret;
 }
 
 det_status_t det_set_input(input_image_t imageData, det_model_type modelType)
 {
+	LOGP("Enter, modeltype:%d", modelType);
 	int ret = DET_STATUS_OK;
 	p_det_network_t net = &network[modelType];
 	if (!net->status) {
@@ -291,12 +305,15 @@ det_status_t det_set_input(input_image_t imageData, det_model_type modelType)
 		_SET_STATUS_(ret, DET_STATUS_ERROR, exit);
 	}
 	net->status = NETWORK_PREPARING;
+
 exit:
+	LOGP("Leave, modeltype:%d", modelType);
 	return ret;
 }
 
 det_status_t det_get_result(pDetResult resultData, det_model_type modelType)
 {
+	LOGP("Enter, modeltype:%d", modelType);
 	int ret = DET_STATUS_OK;
 	p_det_network_t net = &network[modelType];
 	if (NETWORK_PREPARING != net->status) {
@@ -320,11 +337,13 @@ det_status_t det_get_result(pDetResult resultData, det_model_type modelType)
 	model_postprocess[modelType](graph, resultData);
 
 exit:
+	LOGP("Leave, modeltype:%d", modelType);
 	return ret;
 }
 
 det_status_t det_release_model(det_model_type modelType)
 {
+	LOGP("Enter, modeltype:%d", modelType);
 	int ret = DET_STATUS_OK;
 	p_det_network_t net = &network[modelType];
 	if (!net->status) {
@@ -340,14 +359,16 @@ det_status_t det_release_model(det_model_type modelType)
 
 	net->status = NETWORK_UNINIT;
 	net->graph = NULL;
-	LOGI("Release model success, modeltype:%d", modelType);
 
 exit:
+	LOGP("Leave, modeltype:%d", modelType);
 	return ret;
 }
 
 det_status_t det_set_log_config(det_debug_level_t level,det_log_format_t output_format)
 {
+	LOGP("Enter, level:%d", level);
 	det_set_log_level(level, output_format);
+	LOGP("Leave, level:%d", level);
 	return 0;
 }

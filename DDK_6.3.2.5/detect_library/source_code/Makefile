@@ -27,19 +27,23 @@ _OBJ += vnn_yolov27d.o
 _OBJ += vnn_yolov288.o
 _OBJ += vnn_yolov37d.o
 _OBJ += vnn_yolov388.o
+_OBJ += vnn_facenet7d.o
+_OBJ += vnn_facenet88.o
 _OBJ += yoloface_postprocess.o
 _OBJ += yoloface_preprocess.o
 _OBJ += yolov2_postprocess.o
 _OBJ += yolov2_preprocess.o
 _OBJ += yolov3_postprocess.o
 _OBJ += yolov3_preprocess.o
+_OBJ += facenet_process.o
 OBJ=$(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(OFILE): $(OBJ)
-	$(CC) -shared -o $(OFILE) ./obj/*.o
+	#$(CC) -shared -o $(OFILE) ./obj/*.o
+	$(CC) $(CFLAGS) -shared -o $(OFILE) ./obj/*.o
 
 .PHONY: clean
 

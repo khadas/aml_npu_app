@@ -18,6 +18,13 @@ void det_set_log_level(det_debug_level_t level,det_log_format_t output_format)
         g_log_level = level;
         LOGW("Set log level=%d",g_log_level);
     }
+    LOGW("output_format not support Imperfect, default to DET_LOG_TERMINAL");
+
+    char* vsi_log = getenv("VSI_NN_LOG_LEVEL");
+    if (!vsi_log) {
+        setenv("VSI_NN_LOG_LEVEL", "1", 0);
+        LOGW("Not exist VSI_NN_LOG_LEVEL, Setenv set_vsi_log_error_level");
+    }
 	return;
 }
 
