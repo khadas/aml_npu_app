@@ -11,8 +11,8 @@ CFLAGS += $(INCLUDE)
 
 ################################################################################
 # Supply necessary libraries.
-LIBS += -L$(SDK_LIB)/sharelib -l OpenVX -l OpenVXU -l CLC -l VSC -l m -lGAL -l LLVM_viv
-LIBS += -L$(SDK_LIB)/sharelib -l ovxlib
+LIBS += -L$(SDK_LIB)/sharelib/lib32 -l OpenVX -l OpenVXU -l CLC -l VSC -l m -lGAL -l LLVM_viv -l ovxlib
+LIBS += -L$(SDK_LIB)/sharelib/lib64 -l OpenVX -l OpenVXU -l CLC -l VSC -l m -lGAL -l LLVM_viv -l ovxlib
 LIBS +=-L$(LIB_DIR) -l stdc++  -l m
 
 CFLAGS +=-I. -g -fPIE -Wall -pthread $(LIBS)

@@ -68,8 +68,6 @@ const char * so_file_name[DET_BUTT]= {
 	"libnn_facenet.so",
 };
 
-
-
 static det_status_t check_input_param(input_image_t imageData, det_model_type modelType)
 {
 	int ret = DET_STATUS_OK;
@@ -78,8 +76,8 @@ static det_status_t check_input_param(input_image_t imageData, det_model_type mo
 		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
 
-	if (imageData.pixel_format != PIX_FMT_RGB888) {
-		LOGE("Current only support RGB888");
+	if (imageData.pixel_format != PIX_FMT_NV21 && imageData.pixel_format != PIX_FMT_RGB888) {
+		LOGE("Current only support RGB888 and NV21");
 		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
 
@@ -90,12 +88,19 @@ static det_status_t check_input_param(input_image_t imageData, det_model_type mo
 		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
 
-	if (width != imageData.width || height != imageData.height || channel != imageData.channel)
-	{
-		LOGE("Inputsize not match! net VS img iswidth:%dvs%d, height:%dvs%d channel:%dvs%d \n",
-				width, imageData.width, height, imageData.height, channel, imageData.channel);
+	if (width != imageData.width) {
+		LOGE("Inputsize not match! net VS img is width:%dvs%d \n",
+				width, imageData.width);
 		_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
 	}
+
+	if (imageData.pixel_format == PIX_FMT_RGB888) {
+		if (channel != imageData.channel || height != imageData.height) {
+			LOGE("Inputsize not match! net VS img is height:%dvs%d, width:channel:%dvs%d \n", height, imageData.height, channel, imageData.channel);
+			_SET_STATUS_(ret, DET_STATUS_PARAM_ERROR, exit);
+		}
+	}
+
 exit:
 	return ret;
 }
@@ -141,12 +146,14 @@ static void check_and_set_dev_type()
 	LOGD("290 index=%d",index);
 	switch (buffer[index+3]) {
 		case 'a':
-			LOGI("set_dev_type REVA");
+			LOGI("set_dev_type REVA and setenv 0");
 			g_dev_type = DEV_REVA;
+			setenv("DEV_TYPE", "0", 0);
 			break;
 		case 'b':
-			LOGI("set_dev_type REVB");
+			LOGI("set_dev_type REVB and setenv 1");
 			g_dev_type = DEV_REVB;
+			setenv("DEV_TYPE", "1", 0);
 			break;
 		default:
 			LOGW("set_dev_type err:%c ,and set default RevA", buffer[index+3]);
