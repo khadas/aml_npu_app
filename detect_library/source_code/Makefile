@@ -10,7 +10,7 @@ CFLAGS += $(INCLUDE)
 # Supply necessary libraries.
 LIBS +=-L$(LIB_DIR) -l stdc++  -l m
 
-CFLAGS +=-I. -g -fPIE -Wall -pthread $(LIBS)
+CFLAGS +=-I. -O2 -fPIE -Wall -pthread $(LIBS)
 ODIR=obj
 OFILE=libnn_detect.so
 

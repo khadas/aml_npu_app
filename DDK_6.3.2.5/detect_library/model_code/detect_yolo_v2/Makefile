@@ -15,7 +15,7 @@ LIBS += -L$(SDK_LIB)/sharelib/lib32 -l OpenVX -l OpenVXU -l CLC -l VSC -l m -lGA
 LIBS += -L$(SDK_LIB)/sharelib/lib64 -l OpenVX -l OpenVXU -l CLC -l VSC -l m -lGAL -l LLVM_viv -l ovxlib
 LIBS +=-L$(LIB_DIR) -l stdc++  -l m
 
-CFLAGS +=-I. -g -fPIE -Wall -pthread $(LIBS)
+CFLAGS +=-I. -O2 -fPIE -Wall -pthread $(LIBS)
 ODIR=obj
 OFILE=libnn_yolo_v2.so
 
