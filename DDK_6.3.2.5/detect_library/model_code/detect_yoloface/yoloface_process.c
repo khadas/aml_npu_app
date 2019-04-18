@@ -341,11 +341,11 @@ void yolo_face_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
             buffer[output_cnt]= tmp1*fl;
             output_cnt++;
         }
+        vsi_nn_Free(tensor_data);
     }
 
     yolo_post_process(resultData,buffer,13,13,output_len, (int *)output_size);
 
-    if(tensor_data) vsi_nn_Free(tensor_data);
     if (buffer) free(buffer);
 	return;
 }

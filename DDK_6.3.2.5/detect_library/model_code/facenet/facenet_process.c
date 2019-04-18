@@ -54,4 +54,5 @@ void facenet_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
     for (i = 0; i < output_len; i++) {
         buffer[i] = sqrt(sum)*buffer[i];
     }
+    if (tensor_data) vsi_nn_Free(tensor_data);
 }

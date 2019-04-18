@@ -328,11 +328,11 @@ uint32_t i,j,stride;
             buffer[output_cnt]= tmp1*fl;
             output_cnt++;
         }
+        vsi_nn_Free(tensor_data);
     }
 
     yolo_v2_post_process(resultData,buffer,13,13,output_len, (int *)output_size);
 
-    if (tensor_data) vsi_nn_Free(tensor_data);
     if (buffer) free(buffer);
     return;
 }
