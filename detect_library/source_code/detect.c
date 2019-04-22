@@ -313,7 +313,7 @@ det_status_t det_release_model(det_model_type modelType)
 		_SET_STATUS_(ret, DET_STATUS_OK, exit);
 	}
 
-	net->process.model_release(modelType);
+	net->process.model_release(g_dev_type);
 	if (net->input_ptr) {
 		free(net->input_ptr);
 		net->input_ptr = NULL;
