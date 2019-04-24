@@ -5,24 +5,34 @@
 #include <float.h>
 
 #include "yolov3_process.h"
+#include "yolo_v3.h"
 
 #define NN_TENSOR_MAX_DIMENSION_NUMBER 4
 
 /*Preprocess*/
 void yolov3_preprocess(input_image_t imageData, uint8_t *ptr)
 {
-	int nn_width, nn_height, channels, tmpdata;
-	int offset=0, i=0, j=0;
-	uint8_t *src = (uint8_t *)imageData.data;
+    int nn_width, nn_height, channels, tmpdata;
+    int offset=0, i=0, j=0;
+    uint8_t *src = (uint8_t *)imageData.data;
 
-	/* called after check_input_param
-	   so the model_size equals to img_size */
-	nn_width = imageData.width;
-	nn_height = imageData.height;
-	channels = imageData.channel;
+    model_getsize(&nn_width, &nn_height, &channels);
+    memset(ptr, 0, nn_width * nn_height * channels * sizeof(uint8_t));
 
-	memset(ptr, 0, nn_width * nn_height * channels * sizeof(uint8_t));
-	for (i = 0; i < channels; i++) {
+    if (imageData.pixel_format == PIX_FMT_NV21) {
+        offset = nn_width * nn_height;
+
+        for (j = 0; j < nn_width * nn_height; j++) {
+            tmpdata = (src[j]>>1);
+            tmpdata = (uint8_t)((tmpdata >  127) ? 127 : (tmpdata < -128) ? -128 : tmpdata);
+            ptr[j] = tmpdata;
+            ptr[j + offset*1] = tmpdata;
+            ptr[j + offset*2] = tmpdata;
+        }
+        return;
+    }
+
+    for (i = 0; i < channels; i++) {
         offset = nn_width * nn_height *( channels -1 - i);  // prapare BGR input data
         for (j = 0; j < nn_width * nn_height; j++) {
         	tmpdata = (src[j * channels + i]>>1);
