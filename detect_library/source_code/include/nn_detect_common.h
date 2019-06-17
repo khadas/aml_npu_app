@@ -143,6 +143,7 @@ typedef enum {
 typedef enum {
   DEV_REVA = 0,
   DEV_REVB,
+  DEV_MS1,
   DEV_BUTT,
 } dev_type;
 

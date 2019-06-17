@@ -156,8 +156,9 @@ static void check_and_set_dev_type()
 			setenv("DEV_TYPE", "1", 0);
 			break;
 		default:
-			LOGW("set_dev_type err:%c ,and set default RevA", buffer[index+3]);
-			g_dev_type = DEV_REVA;
+			LOGI("set_dev_type DEV_MS1 and setenv 2 index=%d char:%c", index, buffer[index+3]);
+			g_dev_type = DEV_MS1;
+			setenv("DEV_TYPE", "2", 0);
 			break;
 	}
 	pclose(fp);
