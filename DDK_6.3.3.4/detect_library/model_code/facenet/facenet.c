@@ -41,9 +41,9 @@ void model_getsize(int *width, int *height, int *channel)
 		vsi_nn_tensor_t *tensor = NULL;
 		tensor = vsi_nn_GetTensor(g_graph, g_graph->input.tensors[0] );
 
-		*width = tensor->attr.size[0];
-		*height = tensor->attr.size[1];
-		*channel = tensor->attr.size[2];
+		*width = tensor->attr.size[1];
+		*height = tensor->attr.size[2];
+		*channel = tensor->attr.size[0];
 	}
 }
 
