@@ -15,6 +15,8 @@ void facenet_preprocess(input_image_t imageData, uint8_t *ptr)
     int nn_width, nn_height, channels, tmpdata;
     int offset=0, i=0, j=0;
     uint8_t *src = (uint8_t *)imageData.data;
+    uint32_t reorder[3] = {2,1,0};
+    int order;
 
     model_getsize(&nn_width, &nn_height, &channels);
     memset(ptr, 0, nn_width * nn_height * channels * sizeof(uint8_t));
@@ -32,12 +34,22 @@ void facenet_preprocess(input_image_t imageData, uint8_t *ptr)
         return;
     }
 
-
+   /*
     for (i = 0; i < channels; i++) {
         offset = nn_width * nn_height *( channels -1 - i);  // prapare BGR input data
         for (j = 0; j < nn_width * nn_height; j++) {
         	tmpdata = (src[j * channels + i]>>1);
         	ptr[j + offset] = (uint8_t)((tmpdata >  127) ? 127 : (tmpdata < -128) ? -128 : tmpdata);
+        }
+    }
+    */
+
+    for (i = 0; i < nn_width * nn_height; i++) {
+        offset =  channels*i;
+        for (j = 0; j < channels; j++) {
+            order = reorder[j];
+            tmpdata = (src[offset + order]>>1);
+            ptr[j + offset] = (uint8_t)((tmpdata >  127) ? 127 : (tmpdata < -128) ? -128 : tmpdata);
         }
     }
     return;
