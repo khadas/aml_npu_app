@@ -52,7 +52,7 @@ typedef struct detect_network {
 dev_type g_dev_type = DEV_REVA;
 det_network_t network[DET_BUTT]={0};
 
-const char* data_file_path = "/etc/nn_data";
+const char* data_file_path = "nn_data";
 const char * so_file_name[DET_BUTT]= {
 	"libnn_yoloface.so",
 	"libnn_yolo_v2.so",
