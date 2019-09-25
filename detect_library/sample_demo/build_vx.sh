@@ -6,46 +6,32 @@ set -e
 # establish build environment and build options value
 # Please modify the following items according your build environment
 
-ARCH=arm-fsl
-if [ ! -z $1 ]; then
-    ARCH=$1
+if [ -z "$1" ] || [ -z "$2" ]; then
+	echo "usage: $0 <linux sdk dir> <fenix dir>"
+	exit 1
 fi
 
 
-export AQROOT=/mnt/fileroot/deng.liu/liu/basesrc-6.3.2.5
-export AQARCH=$AQROOT/arch/XAQ2
+export AQROOT=$1
+export FENIX_DIR=$2
+#export AQARCH=$AQROOT/arch/XAQ2
 export SDK_DIR=$AQROOT/build/sdk
+export OPENCV_ROOT=$SDK_DIR/opencv3
 
 export VIVANTE_SDK_DIR=$SDK_DIR
 export VIVANTE_SDK_INC=$SDK_DIR/include
 export VIVANTE_SDK_LIB=$SDK_DIR/drivers
-export OVXLIB_DIR=/$AQROOT/acuity-ovxlib-dev
-export OUTPUT_DIR=/mnt/fileroot/deng.liu/base/output/mesong12b_skt_release/target/usr/lib
-
-case "$ARCH" in
-
-arm-fsl)
-    ARCH=arm64
-    export ARCH_TYPE=$ARCH
-    export CPU_TYPE=cortex-a53
-    export CPU_ARCH=armv8-a
-    export FIXED_ARCH_TYPE=arm64
-    export OPENCV_ROOT=/mnt/fileroot/deng.liu/base/output/mesong12b_skt_release/build/opencv3-3.4.3
-
-    export CROSS_COMPILE=aarch64-linux-gnu-
-    export TOOLCHAIN=/mnt/fileroot/deng.liu/base/toolchain/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin
-    export LIB_DIR=$(TOOLCHAIN)/../aarch64-linux-gnu/libc/lib
-
-;;
-
-*)
-   echo "ERROR: Unknown $ARCH, or not support so far"
-   exit 1
-;;
-
-esac;
+export OVXLIB_DIR=$AQROOT/acuity-ovxlib-dev
 
 
+ARCH=arm64
+export ARCH_TYPE=$ARCH
+export CPU_TYPE=cortex-a53
+export CPU_ARCH=armv8-a
+export FIXED_ARCH_TYPE=arm64
+export CROSS_COMPILE=aarch64-linux-gnu-
+export TOOLCHAIN=$FENIX_DIR/build/toolchains/gcc-linaro-aarch64-linux-gnu/bin
+export LIB_DIR=$TOOLCHAIN/../aarch64-linux-gnu/libc/lib
 ########################################################
 # set special build options valule
 # You can modify the build options for different results according your requirement
