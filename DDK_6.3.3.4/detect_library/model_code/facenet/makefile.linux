@@ -1,6 +1,6 @@
 include $(AQROOT)/makefile.linux.def
 
-INCLUDE += -I$(AQROOT)/sdk/inc -I$(OVXLIB_DIR)/include/ops -I$(OVXLIB_DIR)/include  -I./include
+INCLUDE += -I$(SDK_DIR)/include -I$(OVXLIB_DIR)/include/ops -I$(OVXLIB_DIR)/include  -I./include
 CFLAGS += $(INCLUDE)
 CFLAGS += -fPIC -shared
 
