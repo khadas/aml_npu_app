@@ -13,7 +13,7 @@ LIBS += -lm -lpthread -ldl
 LIBS += -L$(OVXLIB_DIR)/lib/  -lz
 LIBS += -L$(OPENCV_ROOT)/lib  -lopencv_imgproc -lopencv_core -lopencv_videoio -lopencv_imgcodecs -lopencv_highgui
 
-LIBS += -L$(AQROOT)/../source_code/bin_r -lnn_detect
+LIBS += -L../source_code/bin_r -lnn_detect
 
 LIBS +=-L$(LIB_DIR) -lstdc++
 
