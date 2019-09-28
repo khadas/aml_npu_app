@@ -6,11 +6,51 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 
+#include <unistd.h>
+#include <iostream>
+#include <stdio.h>
+#include <fstream>
+#include <dirent.h>
+#include <queue>
+#include <fcntl.h>
+#include <string.h>
+#include <linux/fb.h>
+#include <linux/kd.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <VX/vx.h>
+#include <VX/vxu.h>
+#include <VX/vx_api.h>
+#include <VX/vx_khr_cnn.h>
+#include <semaphore.h>
+#include <sys/time.h>
+#include <sched.h>
+#include <linux/videodev2.h>
+#include <poll.h>
+#include <semaphore.h>
+#include <sys/resource.h>
+
 #include "nn_detect.h"
 #include "nn_detect_utils.h"
 
 using namespace std;
 using namespace cv;
+
+const char *xcmd="echo 1080p60hz > /sys/class/display/mode;\
+fbset -fb /dev/fb0 -g 1920 1080 1920 2160 32;\
+echo 1 > /sys/class/graphics/fb0/freescale_mode;\
+echo 0 0 1919 1079 >  /sys/class/graphics/fb0/window_axis;\
+echo 0 0 1919 1079 > /sys/class/graphics/fb0/free_scale_axis;\
+echo 0x10001 > /sys/class/graphics/fb0/free_scale;\
+echo 0 > /sys/class/graphics/fb0/blank;";
+
+static int fbfd = 0;
+static struct fb_var_screeninfo vinfo;
+static struct fb_fix_screeninfo finfo;
+static long int screensize = 0;
+char *fbp;
 
 #define _CHECK_STATUS_(status, stat, lbl) do {\
 	if (status != stat) \
@@ -77,6 +117,27 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 			}
 			default:
 			break;
+		}
+
+		{
+#if 0
+			Mat rgbImage;
+			cv::Mat sourceFrame111 = cvarrToMat(pImg);
+			cvtColor(sourceFrame111, rgbImage, CV_BGR2RGB);
+			IplImage test = IplImage(rgbImage);
+
+			memcpy(fbp+1920*1080*3,test.imageData,1920*1080*3);
+			vinfo.activate = FB_ACTIVATE_NOW;
+			vinfo.vmode &= ~FB_VMODE_YWRAP;
+			vinfo.yoffset = 1080;
+			ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
+#else
+			memcpy(fbp+1920*1080*3,pImg->imageData,1920*1080*3);
+			vinfo.activate = FB_ACTIVATE_NOW;
+			vinfo.vmode &= ~FB_VMODE_YWRAP;
+			vinfo.yoffset = 1080;
+			ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
+#endif		
 		}
 	}
 }
@@ -156,6 +217,8 @@ int run_detect_model(int argc, char** argv)
 	cv::resize(sourceFrame, testImage, testImage.size());
 	img_width = sourceFrame.cols;
 	img_height = sourceFrame.rows;
+
+	printf("img_width: %d, img_height: %d\n", img_width, img_height);
 
 	input_image_t image;
 	image.data		= testImage.data;
@@ -362,6 +425,74 @@ int run_detect_facent(int argc, char** argv)
 	return ret;
 }
 
+static int init_fb(void)
+{
+	long int i;
+
+	printf("init_fb...\n");
+
+    // Open the file for reading and writing
+    fbfd = open("/dev/fb0", O_RDWR);
+    if (!fbfd)
+    {
+        printf("Error: cannot open framebuffer device.\n");
+        exit(1);
+    }
+
+    // Get fixed screen information
+    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo))
+    {
+        printf("Error reading fixed information.\n");
+        exit(2);
+    }
+
+    // Get variable screen information
+    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo))
+    {
+        printf("Error reading variable information.\n");
+        exit(3);
+    }
+    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+/*============add for display BGR begin================,for imx290,reverse color*/
+	vinfo.red.offset = 0;
+	vinfo.red.length = 0;
+	vinfo.red.msb_right = 0;
+
+	vinfo.green.offset = 8;
+	vinfo.green.length = 0;
+	vinfo.green.msb_right = 0;
+
+	vinfo.blue.offset = 16;
+	vinfo.blue.length = 0;
+	vinfo.blue.msb_right = 0;	
+
+	vinfo.transp.offset = 0;
+	vinfo.transp.length = 0;
+	vinfo.transp.msb_right = 0;	
+	vinfo.nonstd = 0;
+	vinfo.bits_per_pixel = 24;
+
+	//vinfo.activate = FB_ACTIVATE_NOW;   //zxw
+	//vinfo.vmode &= ~FB_VMODE_YWRAP;
+	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo) == -1) {
+        printf("Error reading variable information\n");
+    }
+/*============add for display BGR end ================*/	
+    // Figure out the size of the screen in bytes
+    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
+
+    // Map the device to memory
+    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
+                       fbfd, 0);
+					   
+    if (fbp == NULL)
+    {
+        printf("Error: failed to map framebuffer device to memory.\n");
+        exit(4);
+    }
+	return 0;
+}
+
 int main(int argc, char** argv)
 {
 	det_model_type type;
@@ -370,6 +501,9 @@ int main(int argc, char** argv)
 		cout << "Usage: " << argv[0] << " type  picture_path"<<endl;
 		return -1;
 	}
+
+	system(xcmd);
+	init_fb();
 
 	type = (det_model_type)atoi(argv[1]);
 	switch (type) {
