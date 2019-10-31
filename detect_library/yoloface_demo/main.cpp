@@ -766,7 +766,7 @@ static void *thread_func(void *x)
     struct timeval tmsStart, tmsEnd;
 	DetectResult resultData;
 
-	cv::Mat yolo_v2Image(g_nn_width, g_nn_width, CV_8UC1);
+	cv::Mat yolo_v2Image(g_nn_width, g_nn_width, CV_8UC3);
 
     setpriority(PRIO_PROCESS, pthread_self(), -15);
 

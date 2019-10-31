@@ -502,9 +502,6 @@ static void *thread_func(void *x)
 
 	int video_width, video_height;
 
-
-	printf("###### frame_cols: %d, rows: %d, c: %d\n", frame_in.cols, frame_in.rows, frame_in.channels());
-
 	cv::Mat yolo_v2Image(g_nn_width, g_nn_height, CV_8UC1);
 
 	cv::VideoCapture cap("v4l2src device=/dev/video0 ! image/jpeg,width=1920,height=1080,framerate=30/1 ! jpegdec ! videoconvert ! video/x-raw, format=(string)BGR ! appsink");
