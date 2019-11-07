@@ -142,7 +142,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
         top = resultData.point[i].point.rectPoint.top*YRATE;
         bottom = resultData.point[i].point.rectPoint.bottom*YRATE;
 #endif
-		cout << "i:" <<resultData.detect_num <<" left:" << left <<" right:" << right << " top:" << top << " bottom:" << bottom <<endl;
+//		cout << "i:" <<resultData.detect_num <<" left:" << left <<" right:" << right << " top:" << top << " bottom:" << bottom <<endl;
 		CvPoint pt1;
 		CvPoint pt2;
 		pt1=cvPoint(left,top);
@@ -168,7 +168,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 				if (top < 50) {
 					top = 50;
 					left +=10;
-					cout << "left:" << left << " top-10:" << top-10 <<endl;
+//					cout << "left:" << left << " top-10:" << top-10 <<endl;
 				}
 				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
 				break;
