@@ -561,9 +561,12 @@ static void *thread_func(void *x)
 
 		cv::Mat sourceFrame = cvarrToMat(frame2process);
         cv::resize(sourceFrame, yolo_v2Image, yolo_v2Image.size());
+		gettimeofday(&tmsEnd, 0);
+		tmpVal = 1000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec) / 1000;
+
+		gettimeofday(&tmsStart, 0);
 		int img_width = sourceFrame.cols;
 		int img_height = sourceFrame.rows;
-
 
 		input_image_t image;
 		image.data      = yolo_v2Image.data;
@@ -590,9 +593,6 @@ static void *thread_func(void *x)
 		}
 //		cout << "Det_get_result END" << endl;
 
-        gettimeofday(&tmsEnd, 0);
-        tmpVal = 1000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec) / 1000;
-        gettimeofday(&tmsStart, 0);
 		draw_results(frame2process, resultData, img_width, img_height, g_model_type);
         gettimeofday(&tmsEnd, 0);
         tmpVal = 1000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec) / 1000;
