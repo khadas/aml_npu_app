@@ -648,6 +648,12 @@ int main(int argc, char** argv)
 	if (argc < 3) {
 		cout << "input param error" <<endl;
 		cout << "Usage: " << argv[0] << " <video device> <type>"<<endl;
+		cout << "       video device:"<<endl;
+		cout << "       /dev/videoX\n"<<endl;
+		cout << "       type: " <<endl;
+		cout << "       0 - Yoloface"<<endl;
+		cout << "       1 - YoloV2"<<endl;
+		cout << "       2 - YoloV3"<<endl;
 		return -1;
 	}
 
