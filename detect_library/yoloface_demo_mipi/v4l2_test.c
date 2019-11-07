@@ -61,6 +61,8 @@ unsigned char *displaybuf;
 int frame_cnt = 0;
 //FILE *outfile = NULL;
 
+char *video_device = NULL;
+
 pthread_mutex_t mutex4q;
 
 /*=================bmp save begin===============*/
@@ -692,7 +694,7 @@ void *camera_thread_func(void *arg)
     uint32_t width=0, height=0;
     uint32_t pixel_format = ISP_V4L2_PIX_FMT_ARGB2101010;
     char *fbdevname = "/dev/fb0";
-    char *v4ldevname = "/dev/video0";
+    char *v4ldevname = video_device;
     int rc = 0;
     int i;
     int command = 1;  //test

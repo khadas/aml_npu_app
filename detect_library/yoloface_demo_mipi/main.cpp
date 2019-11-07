@@ -76,6 +76,7 @@ static long int screensize = 0;
 char *fbp;
 int opencv_ok = 0;
 static int pingflag = 0;
+extern char *video_device;
 
 pthread_mutex_t mutex4q;
 
@@ -644,16 +645,17 @@ int main(int argc, char** argv)
 	int i;
 	pthread_t tid[2];
 	det_model_type type;
-	if (argc < 2) {
+	if (argc < 3) {
 		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " type"<<endl;
+		cout << "Usage: " << argv[0] << " <video device> <type>"<<endl;
 		return -1;
 	}
 
 	system(xcmd);
 	init_fb();
 
-	type = (det_model_type)atoi(argv[1]);
+	video_device = argv[1];
+	type = (det_model_type)atoi(argv[2]);
 	g_model_type = type;
 	run_detect_model(type);
 
