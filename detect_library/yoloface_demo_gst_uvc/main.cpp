@@ -74,6 +74,7 @@ static struct fb_fix_screeninfo finfo;
 static long int screensize = 0;
 char *fbp;
 int opencv_ok = 0;
+static char *video_device = NULL;
 
 pthread_mutex_t mutex4q;
 
@@ -497,6 +498,7 @@ static void *thread_func(void *x)
     bool bFrameReady = false;
     int i = 0,ret = 0;
     FILE *tfd;
+	char gst_str[256];
     struct timeval tmsStart, tmsEnd;
 	DetectResult resultData;
 
@@ -504,7 +506,8 @@ static void *thread_func(void *x)
 
 	cv::Mat yolo_v2Image(g_nn_width, g_nn_height, CV_8UC1);
 
-	cv::VideoCapture cap("v4l2src device=/dev/video0 ! image/jpeg,width=1920,height=1080,framerate=30/1 ! jpegdec ! videoconvert ! video/x-raw, format=(string)BGR ! appsink");
+	sprintf(gst_str, "v4l2src device=%s ! image/jpeg,width=1920,height=1080,framerate=30/1 ! jpegdec ! videoconvert ! video/x-raw, format=(string)BGR ! appsink", video_device);
+	cv::VideoCapture cap(gst_str);
 
 	if (!cap.isOpened()) {
 		cout << "capture device failed to open!" << endl;
@@ -610,9 +613,11 @@ int main(int argc, char** argv)
 	int i;
 	pthread_t tid[2];
 	det_model_type type;
-	if (argc < 2) {
+	if (argc < 3) {
 		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " <type>"<<endl;
+		cout << "Usage: " << argv[0] << " <video device> <type>"<<endl;
+		cout << "       video device:"<<endl;
+		cout << "       /dev/videoX\n"<<endl;
 		cout << "       type: " <<endl;
 		cout << "       0 - Yoloface"<<endl;
 		cout << "       1 - YoloV2"<<endl;
@@ -623,7 +628,8 @@ int main(int argc, char** argv)
 	system(xcmd);
 	init_fb();
 
-	type = (det_model_type)atoi(argv[1]);
+	video_device = argv[1];
+	type = (det_model_type)atoi(argv[2]);
 	g_model_type = type;
 	run_detect_model(type);
 
