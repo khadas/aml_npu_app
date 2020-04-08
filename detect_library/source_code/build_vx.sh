@@ -11,14 +11,17 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
+
 export AQROOT=$1
 #export AQARCH=$AQROOT/arch/XAQ2
 export SDK_DIR=$AQROOT/build/sdk
+export OPENCV_ROOT=$SDK_DIR/opencv3
 
 export VIVANTE_SDK_DIR=$SDK_DIR
 export VIVANTE_SDK_INC=$SDK_DIR/include
 export VIVANTE_SDK_LIB=$SDK_DIR/drivers
-export OVXLIB_DIR=/$AQROOT/acuity-ovxlib-dev
+export OVXLIB_DIR=$AQROOT/acuity-ovxlib-dev
+
 
 ARCH=arm64
 export ARCH_TYPE=$ARCH
@@ -26,8 +29,8 @@ export CPU_TYPE=cortex-a53
 export CPU_ARCH=armv8-a
 export FIXED_ARCH_TYPE=arm64
 export CROSS_COMPILE=aarch64-linux-gnu-
-
-
+export TOOLCHAIN=$AQROOT/../../toolchains/gcc-linaro-aarch64-linux-gnu/bin
+export LIB_DIR=$TOOLCHAIN/../aarch64-linux-gnu/libc/lib
 ########################################################
 # set special build options valule
 # You can modify the build options for different results according your requirement
@@ -123,10 +126,6 @@ BUILD_OPTION_ABI=0
 BUILD_OPTION_LINUX_OABI=0
 BUILD_OPTION_NO_DMA_COHERENT=0
 BUILD_OPTION_USE_VDK=1
-
-BUILD_OPTION_USE_VXC_BINARY=1
-BUILD_OPTION_GPU_CONFIG="vipnanoqi_pid0x7d"
-
 if [ -z $BUILD_OPTION_EGL_API_FB ]; then
     BUILD_OPTION_EGL_API_FB=1
 fi
@@ -193,13 +192,11 @@ BUILD_OPTIONS="$BUILD_OPTIONS CONFIG_DOVEXC5_BOARD=$BUILD_OPTION_CONFIG_DOVEXC5_
 BUILD_OPTIONS="$BUILD_OPTIONS FPGA_BUILD=$BUILD_OPTION_FPGA_BUILD"
 BUILD_OPTIONS="$BUILD_OPTIONS YOCTO_DRI_BUILD=$BUILD_YOCTO_DRI_BUILD"
 BUILD_OPTIONS="$BUILD_OPTIONS _GLIBCXX_USE_CXX11_ABI=1"
-BUILD_OPTIONS="$BUILD_OPTIONS USE_VXC_BINARY=$BUILD_OPTION_USE_VXC_BINARY"
-BUILD_OPTIONS="$BUILD_OPTIONS GPU_CONFIG=$BUILD_OPTION_GPU_CONFIG"
 
-export PATH=$TOOLCHAIN/bin:$PATH
+export PATH=$TOOLCHAIN:$PATH
 
 make -f makefile.linux $BUILD_OPTIONS V_TARGET=clean
-make -f makefile.linux $BUILD_OPTIONS V_TARGET=install  2>&1 | tee log_build.log
+make -f makefile.linux $BUILD_OPTIONS V_TARGET=install  2>&1 | tee $AQROOT/linux_build_sample.log
 
 ########################################################
 # other build/clean commands to build/clean specified items, eg.
