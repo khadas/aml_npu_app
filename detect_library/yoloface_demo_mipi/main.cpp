@@ -165,6 +165,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 			}
 			case DET_YOLO_V2:
 			case DET_YOLO_V3:
+			case DET_YOLO_TINY:
 			{
 				if (top < 50) {
 					top = 50;
@@ -654,6 +655,7 @@ int main(int argc, char** argv)
 		cout << "       0 - Yoloface"<<endl;
 		cout << "       1 - YoloV2"<<endl;
 		cout << "       2 - YoloV3"<<endl;
+		cout << "       3 - YoloV3" << endl;
 		return -1;
 	}
 

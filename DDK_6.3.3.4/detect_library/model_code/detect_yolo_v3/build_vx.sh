@@ -6,14 +6,13 @@ set -e
 # establish build environment and build options value
 # Please modify the following items according your build environment
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-	echo "usage: $0 <linux sdk dir> <fenix dir>"
+if [ -z "$1" ]; then
+	echo "usage: $0 <linux sdk dir>"
 	exit 1
 fi
 
 
 export AQROOT=$1
-export FENIX_DIR=$2
 #export AQARCH=$AQROOT/arch/XAQ2
 export SDK_DIR=$AQROOT/build/sdk
 export OPENCV_ROOT=$SDK_DIR/opencv3-3.4.3
@@ -30,7 +29,7 @@ export CPU_TYPE=cortex-a53
 export CPU_ARCH=armv8-a
 export FIXED_ARCH_TYPE=arm64
 export CROSS_COMPILE=aarch64-linux-gnu-
-export TOOLCHAIN=$FENIX_DIR/build/toolchains/gcc-linaro-aarch64-linux-gnu/bin
+export TOOLCHAIN=$AQROOT/../../toolchains/gcc-linaro-aarch64-linux-gnu/bin
 export LIB_DIR=$TOOLCHAIN/../aarch64-linux-gnu/libc/lib
 ########################################################
 # set special build options valule
