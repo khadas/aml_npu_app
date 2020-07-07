@@ -53,6 +53,8 @@ static int sensor_bits = 10;
 
 static char *str_on_off[2] = { "ON", "OFF" };
 
+int ir_cut_state = 0;
+
 #if DUMP_RAW
 static int dump_fd = -1;
 #endif
@@ -240,6 +242,18 @@ static void do_other_commands(int videofd)
     }
 }
 
+static void do_sensor_ir_cut(int videofd, int ircut_state)
+{
+	struct v4l2_control ctrl;
+
+	ctrl.id = ISP_V4L2_CID_CUSTOM_SENSOR_IR_CUT;
+	ctrl.value = ircut_state;
+	if (-1 == ioctl (videofd, VIDIOC_S_CTRL, &ctrl)) {
+		printf("do_sensor_ir_cut failed\n");
+	}
+}
+
+
 /**********
  * thread function
  */
@@ -309,6 +323,7 @@ void * video_thread(void *arg)
 			v4l2_cap.device_caps);
 
     //do_sensor_preset(videofd,1);
+	do_sensor_ir_cut(videofd, ir_cut_state);
     /**************************************************
      * format configuration
      *************************************************/
