@@ -61,6 +61,8 @@ struct  Frame
 
 extern "C" { void *camera_thread_func(void *arg); }
 
+extern int ir_cut_state;
+
 const char *xcmd="echo 1080p60hz > /sys/class/display/mode;\
 fbset -fb /dev/fb0 -g 1920 1080 1920 2160 32;\
 echo 1 > /sys/class/graphics/fb0/freescale_mode;\
@@ -641,21 +643,29 @@ out:
 	printf("thread_func exit\n");
 }
 
+static void usage(char **argv)
+{
+	cout << "input param error" <<endl;
+	cout << "Usage: " << argv[0] << " <video device> <type> <ir-cut>"<<endl;
+	cout << "       video device:"<<endl;
+	cout << "       /dev/videoX\n"<<endl;
+	cout << "       type: " <<endl;
+	cout << "       0 - Yoloface"<<endl;
+	cout << "       1 - YoloV2"<<endl;
+	cout << "       2 - YoloV3"<<endl;
+	cout << "       3 - YoloV3" << endl;
+	cout << "       ir-cut: " <<endl;
+	cout << "       on - enable IR-CUT"<<endl;
+	cout << "       off - disable IR-CUT"<<endl;
+}
+
 int main(int argc, char** argv)
 {	
 	int i;
 	pthread_t tid[2];
 	det_model_type type;
-	if (argc < 3) {
-		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " <video device> <type>"<<endl;
-		cout << "       video device:"<<endl;
-		cout << "       /dev/videoX\n"<<endl;
-		cout << "       type: " <<endl;
-		cout << "       0 - Yoloface"<<endl;
-		cout << "       1 - YoloV2"<<endl;
-		cout << "       2 - YoloV3"<<endl;
-		cout << "       3 - YoloV3" << endl;
+	if (argc < 4) {
+		usage(argv);
 		return -1;
 	}
 
@@ -665,6 +675,15 @@ int main(int argc, char** argv)
 	video_device = argv[1];
 	type = (det_model_type)atoi(argv[2]);
 	g_model_type = type;
+	if (0 == strcmp(argv[3], "on")) {
+		ir_cut_state = 1;
+	} else if (0 == strcmp(argv[3], "off")) {
+		ir_cut_state = 0;
+	} else {
+		printf("Error: IR-CUT set error!\n");
+		usage(argv);
+		return -1;
+	}
 	run_detect_model(type);
 
 	pthread_mutex_init(&mutex4q,NULL);
