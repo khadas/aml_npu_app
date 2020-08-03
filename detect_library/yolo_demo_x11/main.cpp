@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <string>
 
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -411,12 +412,16 @@ static void *thread_func(void *x)
     struct timeval tmsStart, tmsEnd;
 	DetectResult resultData;
 
+    string str = video_device;
+
 	int video_width, video_height;
 
 	cv::Mat yolo_v2Image(g_nn_width, g_nn_height, CV_8UC1);
 
-	sprintf(gst_str, "v4l2src device=%s ! image/jpeg,width=1920,height=1080,framerate=30/1 ! jpegdec ! videoconvert ! video/x-raw, format=(string)BGR ! appsink", video_device);
-	cv::VideoCapture cap(gst_str);
+    string res=str.substr(10);
+	cv::VideoCapture cap(stoi(res));
+    cap.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
+    cap.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
 
 	if (!cap.isOpened()) {
 		cout << "capture device failed to open!" << endl;
