@@ -63,6 +63,19 @@ extern "C" { void *camera_thread_func(void *arg); }
 
 extern int ir_cut_state;
 
+const char *xcmd="echo 1080p60hz > /sys/class/display/mode;\
+fbset -fb /dev/fb0 -g 1920 1080 1920 2160 32;\
+echo 1 > /sys/class/graphics/fb0/freescale_mode;\
+echo 0 0 1919 1079 >  /sys/class/graphics/fb0/window_axis;\
+echo 0 0 1919 1079 > /sys/class/graphics/fb0/free_scale_axis;\
+echo 0x10001 > /sys/class/graphics/fb0/free_scale;\
+echo 0 > /sys/class/graphics/fb0/blank;";
+
+static int fbfd = 0;
+static struct fb_var_screeninfo vinfo;
+static struct fb_fix_screeninfo finfo;
+static long int screensize = 0;
+char *fbp;
 int opencv_ok = 0;
 static int pingflag = 0;
 extern char *video_device;
@@ -169,11 +182,24 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		}
 	}
 
-    cv::Mat sourceFrame = cvarrToMat(pImg);
-    cv::cvtColor(sourceFrame, sourceFrame, cv::COLOR_RGB2BGR);
-    cv::imshow("Image Window",sourceFrame);
-    cv::waitKey(1);
-
+	if(pingflag == 0)
+	{
+		memcpy(fbp+1920*1080*3,pImg->imageData,1920*1080*3);
+		vinfo.activate = FB_ACTIVATE_NOW;
+		vinfo.vmode &= ~FB_VMODE_YWRAP;
+		vinfo.yoffset = 1080;
+		pingflag = 1;
+		ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
+	}
+	else
+	{
+		memcpy(fbp,pImg->imageData,1920*1080*3);
+		vinfo.activate = FB_ACTIVATE_NOW;
+		vinfo.vmode &= ~FB_VMODE_YWRAP;
+		vinfo.yoffset = 0;
+		pingflag = 0;
+		ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
+	}
 }
 
 static void crop_face(cv::Mat sourceFrame, cv::Mat& imageROI, DetectResult resultData, int img_height, int img_width) {
@@ -457,6 +483,74 @@ int run_detect_facent(int argc, char** argv)
 	return ret;
 }
 
+static int init_fb(void)
+{
+	long int i;
+
+	printf("init_fb...\n");
+
+    // Open the file for reading and writing
+    fbfd = open("/dev/fb0", O_RDWR);
+    if (!fbfd)
+    {
+        printf("Error: cannot open framebuffer device.\n");
+        exit(1);
+    }
+
+    // Get fixed screen information
+    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo))
+    {
+        printf("Error reading fixed information.\n");
+        exit(2);
+    }
+
+    // Get variable screen information
+    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo))
+    {
+        printf("Error reading variable information.\n");
+        exit(3);
+    }
+    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+/*============add for display BGR begin================,for imx290,reverse color*/
+	vinfo.red.offset = 0;
+	vinfo.red.length = 8;
+	vinfo.red.msb_right = 0;
+
+	vinfo.green.offset = 8;
+	vinfo.green.length = 8;
+	vinfo.green.msb_right = 0;
+
+	vinfo.blue.offset = 16;
+	vinfo.blue.length = 8;
+	vinfo.blue.msb_right = 0;	
+
+	vinfo.transp.offset = 0;
+	vinfo.transp.length = 0;
+	vinfo.transp.msb_right = 0;	
+	vinfo.nonstd = 0;
+	vinfo.bits_per_pixel = 24;
+
+	//vinfo.activate = FB_ACTIVATE_NOW;   //zxw
+	//vinfo.vmode &= ~FB_VMODE_YWRAP;
+	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo) == -1) {
+        printf("Error reading variable information\n");
+    }
+/*============add for display BGR end ================*/	
+    // Figure out the size of the screen in bytes
+    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
+
+    // Map the device to memory
+    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
+                       fbfd, 0);
+
+    if (fbp == NULL)
+    {
+        printf("Error: failed to map framebuffer device to memory.\n");
+        exit(4);
+    }
+	return 0;
+}
+
 
 static void *thread_func(void *x)
 {
@@ -471,8 +565,6 @@ static void *thread_func(void *x)
 	cv::Mat yolo_v2Image(g_nn_width, g_nn_width, CV_8UC3);
 
     setpriority(PRIO_PROCESS, pthread_self(), -15);
-
-    cv::namedWindow("Image Window");
 
    while (true) {
         pthread_mutex_lock(&mutex4q);
@@ -502,9 +594,11 @@ static void *thread_func(void *x)
         }
         pthread_mutex_unlock(&mutex4q);
 
+
         gettimeofday(&tmsStart, 0);
 
 		cv::Mat sourceFrame = cvarrToMat(frame2process);
+//		cv::Mat sourceFrame = frame2process;
         cv::resize(sourceFrame, yolo_v2Image, yolo_v2Image.size());
 		int img_width = sourceFrame.cols;
 		int img_height = sourceFrame.rows;
@@ -574,6 +668,9 @@ int main(int argc, char** argv)
 		usage(argv);
 		return -1;
 	}
+
+	system(xcmd);
+	init_fb();
 
 	video_device = argv[1];
 	type = (det_model_type)atoi(argv[2]);
