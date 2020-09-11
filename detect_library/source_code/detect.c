@@ -58,6 +58,7 @@ const char * so_file_name[DET_BUTT]= {
 	"libnn_yolo_v2.so",
 	"libnn_yolo_v3.so",
 	"libnn_yolo_tiny.so",
+	"libnn_yolo_v4.so",
 	"libnn_ssd.so",
 	"libnn_mtcnn_v1.so",
 	"libnn_mtcnn_v2.so",

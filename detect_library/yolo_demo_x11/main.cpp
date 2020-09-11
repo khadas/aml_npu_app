@@ -143,6 +143,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 			}
 			case DET_YOLO_V2:
 			case DET_YOLO_V3:
+			case DET_YOLO_V4:
 			case DET_YOLO_TINY:
 			{
 				if (top < 50) {
@@ -515,7 +516,7 @@ static void *thread_func(void *x)
 		draw_results(frame2process, resultData, img_width, img_height, g_model_type);
         gettimeofday(&tmsEnd, 0);
         tmpVal = 1000 * (tmsEnd.tv_sec - tmsStart.tv_sec) + (tmsEnd.tv_usec - tmsStart.tv_usec) / 1000;
-        if(tmpVal < 56)
+//        if(tmpVal < 56)
         printf("FPS:%d\n",1000/(tmpVal+8));
         sourceFrame.release();
     }
