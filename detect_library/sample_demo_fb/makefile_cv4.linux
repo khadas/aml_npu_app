@@ -37,7 +37,7 @@ OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
 OBJECTS += $(OBJ_DIR)/main_cv4.o
 # installation directory
 INSTALL_DIR := ./
-
+OBJ_DIR = bin_r_cv4
 ################################################################################
 # Include the common makefile.
 
