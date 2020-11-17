@@ -30,6 +30,7 @@ OBJECTS += $(OBJ_DIR)/main.o
 # installation directory
 INSTALL_DIR := ./
 
+OBJ_DIR = bin_r_cv3
 ################################################################################
 # Include the common makefile.
 
