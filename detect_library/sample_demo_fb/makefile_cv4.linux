@@ -1,0 +1,44 @@
+include $(AQROOT)/makefile.linux.def
+INCLUDE += -I$(OPENCV_ROOT)/modules -I$(OPENCV_ROOT)/modules/highgui/include -I$(OPENCV_ROOT)/modules/core/include  -I$(OPENCV_ROOT)/modules/imgproc/include  -I$(OPENCV_ROOT)/modules/objdetect/include -I$(OPENCV_ROOT) -I$(OPENCV_ROOT)/modules/imgcodecs/include -I$(OPENCV_ROOT)/modules/videoio/include  -I. 
+
+INCLUDE += -I$(VIVANTE_SDK_INC) -I$(VIVANTE_SDK_INC)/HAL -I$(AQROOT)/sdk/inc  -I./ -I$(OVXLIB_DIR)/include/utils -I$(OVXLIB_DIR)/include/client  -I$(OVXLIB_DIR)/include/ops -I$(OVXLIB_DIR)/include -I$(OVXLIB_DIR)/third-party/jpeg-9b
+
+CFLAGS += $(INCLUDE)
+
+################################################################################
+# Supply necessary libraries.
+LIBS += $(OVXLIB_DIR)/lib/libjpeg.a
+LIBS += -L$(OVXLIB_DIR)/lib -l ovxlib
+LIBS += -lm -lpthread -ldl
+LIBS += -L$(OVXLIB_DIR)/lib/  -lz
+LIBS += -L$(OPENCV_ROOT)/lib  -lopencv_imgproc -lopencv_core -lopencv_videoio -lopencv_imgcodecs -lopencv_highgui 
+LIBS += -ltbb -ldc1394 -lgstreamer-1.0 -lgobject-2.0 -lglib-2.0 -lgstapp-1.0 -lgstriff-1.0 -lgstpbutils-1.0 -lavcodec -logg -lsoxr -lgssapi_krb5 -lgpg-error -lcrypt -lhogweed -lnettle -ltasn1 -lunistring -lidn2 -lp11-kit -lvorbisfile -lblkid -lkeyutils -lgdal -lmysqlclient -lfyba
+LIBS += -lavformat -lavutil -lswscale -lwebp -lpng16 -lgdcmMSFF -ltiff -lIlmImf-2_3 -lgdcmDSED -ljpeg8 -lX11 -ldrm -lOpenCL -lgdcmDICT -lgdcmjpeg8 -lgdcmjpeg12 -lgdcmjpeg16 -lCharLS -luuid -ljson-c -lgdcmIOD -lbsd -lsystemd -ldatrie -llz4 -lgmp -lcurl-gnutls -lspatialite -ldap -ldapclient -lproj
+LIBS += -lgtk-3 -lgdk-3 -lcairo -lgdk_pixbuf-2.0 -lusb-1.0 -lraw1394 -lgmodule-2.0 -lffi -lpcre -lpcre2-8 -lgstbase-1.0 -lgstaudio-1.0 -lx265 -lxvidcore -lva -lxml2 -lbz2 -lgme -lopenmpt -lchromaprint -lbluray -lgnutls -lssh-gcrypt -lva-drm -lva-x11 -lvdpau -lk5crypto -lkrb5 -lpq -lcfitsio
+LIBS += -lgsttag-1.0 -lgstvideo-1.0 -lswresample -lvpx -lwebpmux -llzma -lrsvg-2 -lzvbi -lsnappy -laom -lcodec2 -llzma -lgsm -lmp3lame -lopenjp2 -lopus -lshine -lspeex -ltheoraenc -ltheoradec -ltwolame -lvorbis -lvorbisenc -lwavpack -lx264 -lgcrypt -lXi -lkrb5support -lcom_err
+LIBS += -lvorbisfile -lmpg123 -licuuc -lnuma -lorc-0.4 -ludev -lXrender -lxcb-render -lxcb-shm -lpixman-1 -lXext -lwayland-client -lwayland-egl -lwayland-cursor -lxkbcommon -lXdamage -lXcomposite -lXcursor -lXrandr -lXinerama -lfreetype -lfontconfig -lmount -lthai -lgraphite2 -licudata
+LIBS += -lharfbuzz -lpango-1.0 -lpangoft2-1.0 -lgio-2.0 -lfribidi -lepoxy -latk-bridge-2.0 -latk-1.0 -lcairo-gobject -lXfixes -lpangocairo-1.0 -lexpat -lxcb -lIlmThread-2_3 -lIex-2_3 -lHalf -ljbig -lzstd -lgdcmCommon -lcrypto -lXdmcp -lXau -latspi -ldbus-1 -lselinux -lsqlite3 -lbrotlidec
+LIBS += -llber-2.4 -lldap_r-2.4 -lpsl -lssh -lrtmp -lnghttp2 -lfygm -lfyut -lssl -lgeotiff -lgssapi -lsasl2 -lbrotlicommon -lgif -lhdf5_serial -lnetcdf -lxerces-c-3.2 -lkmlengine -lkmldom -lkmlbase -lodbcinst -lodbc -lepsilon -lgeos_c -lqhull -lfreexl -lpoppler -lnspr4 -lsmime3 -lnss3 -llcms2
+LIBS += -lplds4 -lplc4 -lnssutil3 -lgeos-3.8.0 -lltdl -luriparser -lminizip -lhdf5_serial_hl -lsz -lroken -lhcrypto -lasn1 -laec -lheimntlm -lhx509 -lheimbase -lwind -larmadillo -lsuperlu -larpack -llapack -lgfortran -lblas -lkrb5-26 -logdi -ldfalt -lmfhdfalt -lstdc++ -lgomp
+
+LIBS += -L../source_code/bin_r -lnn_detect -lm
+
+LIBS +=-L$(LIB_DIR) -lstdc++
+
+
+#############################################################################
+# Macros.
+PROGRAM = 1
+TARGET_NAME = detect_demo
+CUR_SOURCE = ${wildcard *.c}
+#############################################################################
+# Objects.
+OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
+OBJECTS += $(OBJ_DIR)/main_cv4.o
+# installation directory
+INSTALL_DIR := ./
+
+################################################################################
+# Include the common makefile.
+
+include $(AQROOT)/common.target
