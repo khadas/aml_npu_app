@@ -195,12 +195,12 @@ BUILD_OPTIONS="$BUILD_OPTIONS _GLIBCXX_USE_CXX11_ABI=1"
 
 export PATH=$TOOLCHAIN:$PATH
 
-make -f makefile.linux $BUILD_OPTIONS V_TARGET=clean
-make -f makefile.linux $BUILD_OPTIONS V_TARGET=install  2>&1 | tee $AQROOT/linux_build_sample.log
+make -f makefile_cv3.linux $BUILD_OPTIONS V_TARGET=clean
+make -f makefile_cv3.linux $BUILD_OPTIONS V_TARGET=install  2>&1 | tee $AQROOT/linux_build_sample.log
 
 ########################################################
 # other build/clean commands to build/clean specified items, eg.
 #
-# cd $AQROOT; make -f makefile.linux $BUILD_OPTIONS gal_core V_TARGET=clean || exit 1
-# cd $AQROOT; make -f makefile.linux $BUILD_OPTIONS gal_core V_TARGET=install || exit 1
+# cd $AQROOT; make -f makefile_cv3.linux $BUILD_OPTIONS gal_core V_TARGET=clean || exit 1
+# cd $AQROOT; make -f makefile_cv3.linux $BUILD_OPTIONS gal_core V_TARGET=install || exit 1
 
