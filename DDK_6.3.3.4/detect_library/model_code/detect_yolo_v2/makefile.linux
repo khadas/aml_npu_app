@@ -5,38 +5,10 @@ INCLUDE += -I$(VIVANTE_SDK_INC) -I$(VIVANTE_SDK_INC)/HAL -I$(AQROOT)/sdk/inc  -I
 CFLAGS += $(INCLUDE)
 
 ################################################################################
-# Supply necessary libraries.
-#ifeq ($(gcdSTATIC_LINK), 1)
-#LIBS += $(OVXLIB_DIR)/lib/libovxlib.a
-#LIBS += $(VIVANTE_SDK_LIB)/libOpenCL.a
-#LIBS += $(VIVANTE_SDK_LIB)/libOpenVXU.a
-#LIBS += $(VIVANTE_SDK_LIB)/libOpenVXC.a
-#LIBS += $(VIVANTE_SDK_LIB)/libOpenVX.a
-#LIBS += $(VIVANTE_SDK_LIB)/libCLC.a
-#LIBS += $(VIVANTE_SDK_LIB)/libLLVM_viv.a
-#LIBS += $(VIVANTE_SDK_LIB)/libclCompiler.a
-#LIBS += $(VIVANTE_SDK_LIB)/libclPreprocessor.a
-#LIBS += $(VIVANTE_SDK_LIB)/libclCommon.a
-#LIBS += $(VIVANTE_SDK_LIB)/libLLVM_viv.a
-#LIBS += $(VIVANTE_SDK_LIB)/libVSC.a
-#LIBS += $(VIVANTE_SDK_LIB)/libhalarchuser.a
-#LIBS += $(VIVANTE_SDK_LIB)/libhalosuser.a
-#LIBS += $(VIVANTE_SDK_LIB)/libGAL.a
-#LIBS += $(VIVANTE_SDK_LIB)/libhalarchuser.a
-#LIBS += $(VIVANTE_SDK_LIB)/libGAL.a
-#LIBS +=  $(LIB_DIR)/libm.a
-#LIBS +=  $(LIB_DIR)/libpthread.a
-#LIBS +=  $(LIB_DIR)/libc.a
-#LIBS +=  $(LIB_DIR)/libdl.a
-#LIBS +=  $(LIB_DIR)/librt.a
-#LIBS +=  $(LIB_DIR)/libstdc++.a
-#LIBS += $(OVXLIB_DIR)/lib/libjpeg.a
-#else
 LIBS += -L$(VIVANTE_SDK_LIB) -l OpenVX -l OpenVXU -l CLC -l VSC -lGAL
 LIBS += $(OVXLIB_DIR)/lib/libjpeg.a
 LIBS += -L$(OVXLIB_DIR)/lib -l ovxlib
 LIBS += -L$(LIB_DIR) -lm
-#endif
 
 #############################################################################
 # Macros.
