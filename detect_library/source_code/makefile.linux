@@ -6,7 +6,7 @@ CFLAGS += -fPIC -shared
 
 
 LIBS += -L$(OVXLIB_DIR)/lib
-LIBS += -L$(LIB_DIR) -lm -ldl
+LIBS += -L$(LIB_DIR) -lm -ldl -fpic
 #############################################################################
 # Macros.
 PROGRAM = 1

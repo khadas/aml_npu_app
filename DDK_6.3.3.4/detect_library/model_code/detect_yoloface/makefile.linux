@@ -9,7 +9,7 @@ CFLAGS += $(INCLUDE)
 ################################################################################
 LIBS += -L$(VIVANTE_SDK_LIB) -l OpenVX -l OpenVXU -l CLC -l VSC -lGAL
 LIBS += -L$(OVXLIB_DIR)/lib -l ovxlib
-LIBS += -lm -ldl
+LIBS += -lm -ldl -fpic
 
 
 #############################################################################
@@ -49,7 +49,7 @@ $(TARGET_OUTPUT): $(OBJECTS)
 $(OBJ_DIR)/%.o: %.c
 	@echo "  COMPILE $(abspath $<)"
 	@mkdir -p $(OBJ_DIR)
-	@$(CC) -c $(CFLAGS) -o $@ $<
+	@$(CC) $(LDFLAGS) -c $(CFLAGS) -o $@ $<
 
 
 
