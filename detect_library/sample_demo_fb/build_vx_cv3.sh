@@ -6,11 +6,6 @@ set -e
 # establish build environment and build options value
 # Please modify the following items according your build environment
 
-if [ -z "$1" ]; then
-	echo "usage: $0 <linux sdk dir>"
-	exit 1
-fi
-
 if uname -a | grep "x86"; then
 
 	if [ -z "$1" ]; then
