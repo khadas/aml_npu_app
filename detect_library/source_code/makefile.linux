@@ -1,4 +1,4 @@
-include $(AQROOT)/makefile.linux.def
+include ./makefile.linux.def
 
 INCLUDE +=  -I./include
 CFLAGS += $(INCLUDE)
@@ -6,7 +6,7 @@ CFLAGS += -fPIC -shared
 
 
 LIBS += -L$(OVXLIB_DIR)/lib
-LIBS += -L$(LIB_DIR) -lm -ldl
+LIBS += -L$(LIB_DIR) -lm -ldl -fpic
 #############################################################################
 # Macros.
 PROGRAM = 1
@@ -17,6 +17,7 @@ CUR_SOURCE =  ${wildcard *.c}
 # Objects.
 OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
 
+LDFLAGS += -Wall -shared -Wl,-soname,$(TARGET_NAME) -Wl,-z,defs
 
 # installation directory
 INSTALL_DIR := ./
@@ -24,4 +25,26 @@ INSTALL_DIR := ./
 ################################################################################
 # Include the common makefile.
 
-include $(AQROOT)/common.target
+#include $(AQROOT)/common.target
+
+
+TARGET_OUTPUT = $(OBJ_DIR)/$(TARGET_NAME)
+
+all: $(TARGET_OUTPUT)
+
+clean:
+	@rm -rf $(OBJ_DIR)/* $(OBJ_DIR)
+
+install: $(TARGET_OUTPUT)
+	@mkdir -p $(INSTALL_DIR)
+	@-cp $(TARGET_OUTPUT) $(INSTALL_DIR)
+
+$(TARGET_OUTPUT): $(OBJECTS)
+	@$(CC) $(LDFLAGS) $(OBJECTS) -o $(TARGET_OUTPUT) $(LIBS)
+
+$(OBJ_DIR)/%.o: %.c
+	@echo "  COMPILE $(abspath $<)"
+	@mkdir -p $(OBJ_DIR)
+	@$(CC) -c $(CFLAGS) -o $@ $<
+
+
