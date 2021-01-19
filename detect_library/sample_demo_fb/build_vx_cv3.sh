@@ -36,6 +36,7 @@ else
 	export OPENCV_ROOT=/usr/include/opencv2
 	export VIVANTE_SDK_INC=/usr/share/npu/sdk/include
 	export VIVANTE_SDK_LIB=/usr/lib
+	export CPU_TYPE=cortex-a53
 	export CROSS_COMPILE=
 
 fi
