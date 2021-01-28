@@ -6,6 +6,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
+#include <opencv2/imgcodecs/legacy/constants_c.h>
+#include <opencv2/opencv.hpp>
 
 #include <unistd.h>
 #include <iostream>
@@ -127,7 +130,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		pt1=cvPoint(left,top);
 		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(255,10,10),3,4,0);
+		cvRectangle(pImg,pt1,pt2,cvScalar(10,10,250,0),3,4,0);
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
@@ -151,7 +154,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					left +=10;
 //					cout << "left:" << left << " top-10:" << top-10 <<endl;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, cvScalar(0, 255,0 ,0));
 				break;
 			}
 			default:
@@ -259,7 +262,12 @@ int run_detect_facent(int argc, char** argv)
 		return ret;
 	}
 
-	IplImage* frame2process = cvLoadImage(picture_path,CV_LOAD_IMAGE_COLOR);
+    cv::Mat sourceFrame = cv::imread(picture_path,CV_LOAD_IMAGE_COLOR);
+    IplImage* frame2process;
+    frame2process = cvCreateImage(cvSize(sourceFrame.cols,sourceFrame.rows),8,3);
+    IplImage temp = cvIplImage(sourceFrame);
+    cvCopy(&temp,frame2process);
+
 	if (!frame2process) {
 		cout << "Picture : "<< picture_path << " load fail" <<endl;
 		det_release_model(type);
@@ -267,7 +275,6 @@ int run_detect_facent(int argc, char** argv)
 	}
 
 	cv::Mat testImage(nn_height,nn_width,CV_8UC1);
-	cv::Mat sourceFrame = cvarrToMat(frame2process);
 	cv::resize(sourceFrame, testImage, testImage.size());
 	img_width = sourceFrame.cols;
 	img_height = sourceFrame.rows;
@@ -421,8 +428,8 @@ static void *thread_func(void *x)
 
     string res=str.substr(10);
 	cv::VideoCapture cap(stoi(res));
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
 
 	if (!cap.isOpened()) {
 		cout << "capture device failed to open!" << endl;
@@ -432,8 +439,8 @@ static void *thread_func(void *x)
 
 	cout << "open video successfully!" << endl;
 
-	video_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
-	video_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	video_width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+	video_height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 
 	printf("video_width: %d, video_height: %d\n", video_width, video_height);
 
@@ -476,7 +483,8 @@ static void *thread_func(void *x)
 
         gettimeofday(&tmsStart, 0);
 
-		*frame2process = IplImage(frame_in);
+        IplImage temp = cvIplImage(frame_in);
+        cvCopy(&temp,frame2process);
 
 
 		cv::Mat sourceFrame = cvarrToMat(frame2process);
