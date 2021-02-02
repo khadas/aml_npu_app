@@ -1,1 +1,0 @@
-../sample_demo_fb/build_vx_cv4.sh
