@@ -35,7 +35,7 @@ CUR_SOURCE = ${wildcard *.c}
 #############################################################################
 # Objects.
 OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
-OBJECTS += $(OBJ_DIR)/main_cv3.o
+OBJECTS += $(OBJ_DIR)/main.o
 # installation directory
 #INSTALL_DIR := ./
 
