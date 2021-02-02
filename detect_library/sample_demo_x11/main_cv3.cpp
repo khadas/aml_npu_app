@@ -5,6 +5,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 #include <unistd.h>
 #include <iostream>
@@ -168,8 +169,18 @@ int ge2d_destroy(void)
 	return 0;
 }
 
+static cv::Scalar obj_id_to_color(int obj_id) {
 
-static void draw_results(IplImage *pImg, DetectResult resultData, int img_width, int img_height, det_model_type type)
+	int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
+	int const offset = obj_id * 123457 % 6;
+	int const color_scale = 150 + (obj_id * 123457) % 100;
+	cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
+	color *= color_scale;
+	return color;
+}
+
+
+static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width, int img_height, det_model_type type)
 {
 	int i = 0;
 	float left, right, top, bottom;
@@ -189,7 +200,8 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		pt1=cvPoint(left,top);
 		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(10,10,250),3,4,0);
+		cv::Rect rect(left, top, right-left, bottom-top);
+		cv::rectangle(frame,rect,obj_id_to_color(resultData.result_name[i].lable_id),1,8,0);
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
@@ -203,17 +215,20 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					left +=10;
 					cout << "left:" << left << " top-10:" << top-10 <<endl;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				int baseline;
+				cv::Size text_size = cv::getTextSize(resultData.result_name[i].lable_name, cv::FONT_HERSHEY_COMPLEX,0.5,1,&baseline);
+				cv::Rect rect1(left, top-20, text_size.width+10, 20);
+				cv::rectangle(frame,rect1,obj_id_to_color(resultData.result_name[i].lable_id),-1);
+				cv::putText(frame,resultData.result_name[i].lable_name,cvPoint(left+5,top-5),cv::FONT_HERSHEY_COMPLEX,0.5,cv::Scalar(0,0,0),1);
 				break;
 			}
 			default:
 			break;
 		}
 
-        cv::Mat sourceFrame = cvarrToMat(pImg);
-		cv::imwrite("output.bmp", sourceFrame);
+		cv::imwrite("output.bmp", frame);
         cv::namedWindow("Image Window");
-        cv::imshow("Image Window",sourceFrame);
+        cv::imshow("Image Window",frame);
 	}
 }
 
@@ -279,15 +294,15 @@ int run_detect_model(int argc, char** argv)
 	cout << "model.height:" << nn_height <<endl;
 	cout << "model.channel:" << nn_channel << "\n" <<endl;
 
-	//cv::Mat testImage;
-	IplImage* frame2process = cvLoadImage(picture_path,CV_LOAD_IMAGE_COLOR);
-	if (!frame2process) {
+
+	cv::Mat frame = cv::imread(picture_path,CV_LOAD_IMAGE_COLOR);
+	if (frame.empty()) {
 		cout << "Picture : "<< picture_path << " load fail" <<endl;
 		det_release_model(type);
 		return -1;
 	}
 
-	memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame2process->imageData,amlge2d.src_size[0]);
+	memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame.data,amlge2d.src_size[0]);
 
 	amlge2d.ge2dinfo.src_info[0].rect.x = 0;
 
@@ -335,10 +350,9 @@ int run_detect_model(int argc, char** argv)
 	}
 	cout << "Det_get_result END" << endl;
 
-	draw_results(frame2process, resultData, width, height, type);
+	draw_results(frame, resultData, width, height, type);
 
 	det_release_model(type);
-	cvReleaseImage(&frame2process);
 	return ret;
 }
 
@@ -373,16 +387,14 @@ int run_detect_facent(int argc, char** argv)
 		return ret;
 	}
 
-	IplImage* frame2process = cvLoadImage(picture_path,CV_LOAD_IMAGE_COLOR);
-	if (!frame2process) {
+	cv::Mat frame = cv::imread(picture_path,CV_LOAD_IMAGE_COLOR);
+	if (frame.empty()) {
 		cout << "Picture : "<< picture_path << " load fail" <<endl;
 		det_release_model(type);
 		return -1;
 	}
 
-	cv::Mat sourceFrame = cvarrToMat(frame2process);
-
-	memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame2process->imageData,amlge2d.src_size[0]);
+	memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame.data,amlge2d.src_size[0]);
 
 	amlge2d.ge2dinfo.src_info[0].rect.x = 0;
 
@@ -428,7 +440,7 @@ int run_detect_facent(int argc, char** argv)
 	cv::Size ResImgSiz = cv::Size(160, 160);
 	cv::Mat  ResImg160 = cv::Mat(ResImgSiz, imageROI.type());
 
-	crop_face(sourceFrame, imageROI, resultData, img_height, img_width);
+	crop_face(frame, imageROI, resultData, height, width);
 	cv::resize(imageROI, ResImg160, ResImgSiz, CV_INTER_NN);
 	image.data		= ResImg160.data;
 	image.width 	= ResImg160.cols;
@@ -522,7 +534,6 @@ int run_detect_facent(int argc, char** argv)
 	}
 
 	det_release_model(type);
-	cvReleaseImage(&frame2process);
 	return ret;
 }
 

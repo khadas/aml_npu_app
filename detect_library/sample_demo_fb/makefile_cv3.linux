@@ -6,7 +6,7 @@ INCLUDE += -I$(OPENCV_ROOT)/modules/imgproc/include
 INCLUDE += -I$(OPENCV_ROOT)/modules/objdetect/include
 INCLUDE += -I$(OPENCV_ROOT)/modules/imgcodecs/include
 INCLUDE += -I$(OPENCV_ROOT)/modules/videoio/include 
-
+INCLUDE += -I$(OPENCV4_ROOT)
 INCLUDE += -I. 
 
 INCLUDE += -I$(VIVANTE_SDK_INC)

@@ -5,6 +5,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 #include <unistd.h>
 #include <iostream>
@@ -77,24 +78,24 @@ int width = MAX_WIDTH;
 extern char *video_device;
 
 struct option longopts[] = {
-    { "device",         required_argument,  NULL,   'd' },
-    { "width",          required_argument,  NULL,   'w' },
-    { "height",         required_argument,  NULL,   'h' },
-    { "help",           no_argument,        NULL,   'H' },
-    { 0, 0, 0, 0 }
+	{ "device",         required_argument,  NULL,   'd' },
+	{ "width",          required_argument,  NULL,   'w' },
+	{ "height",         required_argument,  NULL,   'h' },
+	{ "model type",     required_argument,  NULL,   'm' },
+	{ "ir-cut",         required_argument,  NULL,   'i' },
+	{ "help",           no_argument,        NULL,   'H' },
+	{ 0, 0, 0, 0 }
 };
 
 int capture_fd = -1;
 
-typedef struct __video_buffer
-{
+typedef struct __video_buffer{
 	void *start;
 	size_t length;
 
 }video_buf_t;
 
-struct  Frame
-{   
+struct  Frame{
 	size_t length;
 	int height;
 	int width;
@@ -135,8 +136,8 @@ det_model_type g_model_type;
 	goto lbl; \
 }while(0)
 
-int ge2d_init(int width, int height)                                                        
-{
+int ge2d_init(int width, int height){
+
 	int ret;
 
 	memset(&amlge2d, 0, sizeof(aml_ge2d_t));
@@ -149,8 +150,8 @@ int ge2d_init(int width, int height)
 	amlge2d.ge2dinfo.src_info[0].format = PIXEL_FORMAT_RGB_888;
 	amlge2d.ge2dinfo.src_info[0].plane_number = 1;
 
-	amlge2d.ge2dinfo.dst_info.canvas_w = 416;
-	amlge2d.ge2dinfo.dst_info.canvas_h = 416;
+	amlge2d.ge2dinfo.dst_info.canvas_w = MODEL_WIDTH;
+	amlge2d.ge2dinfo.dst_info.canvas_h = MODEL_HEIGHT;
 	amlge2d.ge2dinfo.dst_info.format = PIXEL_FORMAT_RGB_888;
 	amlge2d.ge2dinfo.dst_info.plane_number = 1;
 	amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
@@ -180,8 +181,8 @@ int ge2d_init(int width, int height)
 	return 0;
 }
 
-int ge2d_destroy(void)
-{
+int ge2d_destroy(void){
+
 	int i;
 
 	if (amlge2d.ge2dinfo.dst_info.mem_alloc_type == AML_GE2D_MEM_ION)
@@ -214,12 +215,20 @@ int ge2d_destroy(void)
 	return 0;
 }
 
-static void draw_results(IplImage *pImg, DetectResult resultData, int img_width, int img_height, det_model_type type)
-{
+static cv::Scalar obj_id_to_color(int obj_id) {
+
+	int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
+	int const offset = obj_id * 123457 % 6;
+	int const color_scale = 150 + (obj_id * 123457) % 100;
+	cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
+	color *= color_scale;
+	return color;
+}
+
+static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width, int img_height, det_model_type type){
+
 	int i = 0;
 	float left, right, top, bottom;
-	CvFont font;
-    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1,0,3,8);
 
 	for (i = 0; i < resultData.detect_num; i++) {
 		left =  resultData.point[i].point.rectPoint.left*img_width;
@@ -227,25 +236,13 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
         top = resultData.point[i].point.rectPoint.top*img_height;
         bottom = resultData.point[i].point.rectPoint.bottom*img_height;
 //		cout << "i:" <<resultData.detect_num <<" left:" << left <<" right:" << right << " top:" << top << " bottom:" << bottom <<endl;
-		CvPoint pt1;
-		CvPoint pt2;
-		pt1=cvPoint(left,top);
-		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(10,10,250),3,4,0);
+		cv::Rect rect(left, top, right-left, bottom-top);
+		cv::rectangle(frame,rect,obj_id_to_color(resultData.result_name[i].lable_id),1,8,0);
+
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
-			case DET_MTCNN_V1:
-			{
-				int j = 0;
-				cv::Mat testImage;
-				testImage = cv::cvarrToMat(pImg);
-				for (j = 0; j < 5; j ++) {
-					cv::circle(testImage, cv::Point(resultData.point[i].tpts.floatX[j]*img_width, resultData.point[i].tpts.floatY[j]*img_height), 2, cv::Scalar(0, 255, 255), 2);
-				}
-				break;
-			}
 			case DET_YOLO_V2:
 			case DET_YOLO_V3:
 			case DET_YOLO_V4:
@@ -256,7 +253,11 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					left +=10;
 //					cout << "left:" << left << " top-10:" << top-10 <<endl;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				int baseline;
+				cv::Size text_size = cv::getTextSize(resultData.result_name[i].lable_name, cv::FONT_HERSHEY_COMPLEX,0.5,1,&baseline);
+				cv::Rect rect1(left, top-20, text_size.width+10, 20);
+				cv::rectangle(frame,rect1,obj_id_to_color(resultData.result_name[i].lable_id),-1);
+				cv::putText(frame,resultData.result_name[i].lable_name,cvPoint(left+5,top-5),cv::FONT_HERSHEY_COMPLEX,0.5,cv::Scalar(0,0,0),1);
 				break;
 			}
 			default:
@@ -264,9 +265,8 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		}
 	}
 
-	if(pingflag == 0)
-	{
-		memcpy(fbp+1920*1080*3,pImg->imageData,1920*1080*3);
+	if(pingflag == 0)	{
+		memcpy(fbp+1920*1080*3,frame.data,1920*1080*3);
 		vinfo.activate = FB_ACTIVATE_NOW;
 		vinfo.vmode &= ~FB_VMODE_YWRAP;
 		vinfo.yoffset = 1080;
@@ -275,7 +275,7 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 	}
 	else
 	{
-		memcpy(fbp,pImg->imageData,1920*1080*3);
+		memcpy(fbp,frame.data,1920*1080*3);
 		vinfo.activate = FB_ACTIVATE_NOW;
 		vinfo.vmode &= ~FB_VMODE_YWRAP;
 		vinfo.yoffset = 0;
@@ -284,8 +284,8 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 	}
 }
 
-int run_detect_model(det_model_type type)
-{
+int run_detect_model(det_model_type type){
+
 	int ret = 0;
 	int nn_height, nn_width, nn_channel;
 	det_set_log_config(DET_DEBUG_LEVEL_WARN,DET_LOG_TERMINAL);
@@ -316,32 +316,31 @@ int run_detect_model(det_model_type type)
 	return ret;
 }
 
-static int init_fb(void)
-{
+static int init_fb(void){
+
 	printf("init_fb...\n");
 
-    // Open the file for reading and writing
-    fbfd = open("/dev/fb0", O_RDWR);
-    if (!fbfd)
-    {
-        printf("Error: cannot open framebuffer device.\n");
-        exit(1);
-    }
+	// Open the file for reading and writing
+	fbfd = open("/dev/fb0", O_RDWR);
+	if (!fbfd)
+	{
+		printf("Error: cannot open framebuffer device.\n");
+		exit(1);
+	}
 
-    // Get fixed screen information
-    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo))
-    {
-        printf("Error reading fixed information.\n");
-        exit(2);
-    }
+	// Get fixed screen information
+	if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)){
+		printf("Error reading fixed information.\n");
+		exit(2);
+	}
 
-    // Get variable screen information
-    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo))
-    {
-        printf("Error reading variable information.\n");
-        exit(3);
-    }
-    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	// Get variable screen information
+	if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo))
+	{
+		printf("Error reading variable information.\n");
+		exit(3);
+	}
+	printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
 /*============add for display BGR begin================,for imx290,reverse color*/
 	vinfo.red.offset = 0;
 	vinfo.red.length = 8;
@@ -364,33 +363,31 @@ static int init_fb(void)
 	//vinfo.activate = FB_ACTIVATE_NOW;   //zxw
 	//vinfo.vmode &= ~FB_VMODE_YWRAP;
 	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo) == -1) {
-        printf("Error reading variable information\n");
-    }
+		printf("Error reading variable information\n");
+	}
 /*============add for display BGR end ================*/	
-    // Figure out the size of the screen in bytes
-    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
+	// Figure out the size of the screen in bytes
+	screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
 
-    // Map the device to memory
-    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
+	// Map the device to memory
+	fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
                        fbfd, 0);
 
-    if (fbp == NULL)
-    {
-        printf("Error: failed to map framebuffer device to memory.\n");
-        exit(4);
-    }
+	if (fbp == NULL){
+		printf("Error: failed to map framebuffer device to memory.\n");
+		exit(4);
+	}
 	return 0;
 }
 
 
-static void *thread_func(void *x)
-{
-    IplImage *frame2process = NULL;
+static void *thread_func(void *x){
+
+	cv::Mat frame(MAX_HEIGHT, MAX_WIDTH, CV_8UC3);
     int ret = 0,frames=0;
 	DetectResult resultData;
 	struct timeval time_start, time_end;
 	float total_time = 0;
-
 
 	system(xcmd);
 	init_fb();
@@ -398,34 +395,9 @@ static void *thread_func(void *x)
 	gettimeofday(&time_start, 0);
 
 	while (true) {
-        pthread_mutex_lock(&mutex4q);
-        if(opencv_ok == 1)
-        {
-            memcpy(frame2process->imageData,displaybuf,1920*1080*3);
-        }
-        else
-        {
-            if(frame2process == NULL)
-                frame2process = cvCreateImage(cvSize(1920, 1080), IPL_DEPTH_8U, 3);
-            if (frame2process == NULL)
-            {
-                pthread_mutex_unlock(&mutex4q);
-                usleep(100000);
-                //printf("can't load temp bmp in thread to parse\n");
-                continue;
-                }
-            if(frame2process->width != 1920)
-            {
-                printf("read image not 1920 width\n");
-                pthread_mutex_unlock(&mutex4q);
-                continue;
-            }
-            printf("prepare 1080p image ok\n");
-            opencv_ok = 1;   //zxw
-        }
-        pthread_mutex_unlock(&mutex4q);
+		memcpy(frame.data,displaybuf,1920*1080*3);
 
-		memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame2process->imageData,amlge2d.src_size[0]);
+		memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame.data,amlge2d.src_size[0]);
 
 		amlge2d.ge2dinfo.src_info[0].rect.x = 0;
 
@@ -435,8 +407,8 @@ static void *thread_func(void *x)
 
 		amlge2d.ge2dinfo.dst_info.rect.x = 0;
 		amlge2d.ge2dinfo.dst_info.rect.y = 0;
-		amlge2d.ge2dinfo.dst_info.rect.w = 416;
-		amlge2d.ge2dinfo.dst_info.rect.h = 416;
+		amlge2d.ge2dinfo.dst_info.rect.w = MODEL_WIDTH;
+		amlge2d.ge2dinfo.dst_info.rect.h = MODEL_HEIGHT;
 		amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
 		amlge2d.ge2dinfo.src_info[0].layer_mode = 0;
 		amlge2d.ge2dinfo.src_info[0].plane_alpha = 0xff;
@@ -452,8 +424,8 @@ static void *thread_func(void *x)
 
 		input_image_t image;
 		image.data      = (unsigned char*)amlge2d.ge2dinfo.dst_info.vaddr[0];
-		image.width     = 416;
-		image.height    = 416;
+		image.width     = MODEL_WIDTH;
+		image.height    = MODEL_HEIGHT;
 		image.channel   = 3;
 		image.pixel_format = PIX_FMT_RGB888;
 
@@ -471,7 +443,7 @@ static void *thread_func(void *x)
 			goto out;
 		}
 
-		draw_results(frame2process, resultData, width, height, g_model_type);
+		draw_results(frame, resultData, width, height, g_model_type);
 
 		// Measure FPS
 		++frames;
@@ -492,14 +464,14 @@ out:
 	exit(-1);
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv){
+
 	video_device = (char *)DEFAULT_DEVICE;
 	int c = 0;	
 	int i=0,ret=0;
 	pthread_t tid[2];
 
-	while ((c = getopt_long(argc, argv, "d:w:h:m:H", longopts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "d:w:h:m:i:H", longopts, NULL)) != -1) {
 		switch (c) {
 			case 'd':
 				video_device = optarg;
@@ -517,8 +489,19 @@ int main(int argc, char** argv)
 				g_model_type  = (det_model_type)atoi(optarg);
 				break;
 
+			case 'i':
+				if (0 == strcmp(optarg, "on")) {
+					ir_cut_state = 1;
+				} else if (0 == strcmp(optarg, "off")) {
+					ir_cut_state = 0;
+				} else {
+					printf("Error: IR-CUT set error!\n");
+					return -1;
+				}
+				break;
+
 			default:
-				printf("%s [-d device] [-w width] [-h height] [-m model type] [-H]\n", argv[0]);
+				printf("%s [-d device] [-w width] [-h height] [-m model type] [-i ir-cut stat] [-H]\n", argv[0]);
 				exit(1);
 		}
 	}

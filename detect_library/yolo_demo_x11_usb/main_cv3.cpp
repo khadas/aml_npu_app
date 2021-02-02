@@ -6,6 +6,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 #include <unistd.h>
 #include <iostream>
@@ -72,15 +73,14 @@ using namespace cv;
 codec_para_t codec_context;
 
 struct option longopts[] = {
-    { "device",         required_argument,  NULL,   'd' },
-    { "width",          required_argument,  NULL,   'w' },
-    { "height",         required_argument,  NULL,   'h' },
-    { "help",           no_argument,        NULL,   'H' },
-    { 0, 0, 0, 0 }
+	{ "device",         required_argument,  NULL,   'd' },
+	{ "width",          required_argument,  NULL,   'w' },
+	{ "height",         required_argument,  NULL,   'h' },
+	{ "help",           no_argument,        NULL,   'H' },
+	{ 0, 0, 0, 0 }
 };
 
-struct buffer_mapping
-{
+struct buffer_mapping{
 	void* start;
 	size_t length;
 };
@@ -164,12 +164,12 @@ det_model_type g_model_type;
 	goto lbl; \
 }while(0)
 
-int open_codec(int width, int height, int fps)
-{
+int open_codec(int width, int height, int fps){
+
 	int ret;
 	// Initialize the codec
 	memset(&codec_context, 0, sizeof(codec_context));
-    
+
 	codec_context.stream_type = STREAM_TYPE_ES_VIDEO;
 	codec_context.video_type = VFORMAT_MJPEG;
 	codec_context.has_video = 1;
@@ -188,56 +188,56 @@ int open_codec(int width, int height, int fps)
 	return ret;
 }
 
-void reset_codec(void)
-{
+void reset_codec(void){
+
 	codec_reset(&codec_context);
 }
 
-void close_codec(void)
-{
+void close_codec(void){
+
 	codec_close(&codec_context);
 }
 
 
-int open_device_node(const char *path, int *pfd)
-{
+int open_device_node(const char *path, int *pfd){
+
 	if (NULL == path || NULL == pfd)
 		return -1;
-    
+
 	int fd = open(path, O_RDWR);
 	if (fd < 0) {
 		printf("open %s failed.\n", path);
 		return fd;
 	}
-    
+
 	*pfd = fd;
-    
+
 	printf("open %s, fd: %d\n", path, *pfd);
-    
+
 	return 0;
 }
 
 
-void close_device_node(int fd)
-{
+void close_device_node(int fd){
+
 	if (fd > 0)
 		close(fd);
 }
 
-void set_vfm_state(void)
-{
+void set_vfm_state(void){
+
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "rm default");
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "add default decoder ionvideo");
 }
 
-void reset_vfm_state(void)
-{
+void reset_vfm_state(void){
+
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "rm default");
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "add default decoder ppmgr deinterlace amvideo");
 }
 
-void free_buffers(void)
-{
+void free_buffers(void){
+
 	int i;
 	for (i = 0; i < MESON_BUFFER_SIZE; i++) {
 		if (vbuffer[i].ptr) {
@@ -250,8 +250,8 @@ void free_buffers(void)
 }
 
 
-int alloc_buffers(int width, int height)
-{
+int alloc_buffers(int width, int height){
+
 	int i = 0;
 	int size = 0;
 	int ret = -1;
@@ -297,8 +297,8 @@ fail:
 	return ret;
 }
 
-static int ionvideo_init(int width, int height)
-{
+static int ionvideo_init(int width, int height){
+
 	int i, ret;
 
 	alloc_buffers(width, height);
@@ -335,14 +335,14 @@ fail:
 	return ret;
 }
 
-void ionvideo_close()
-{
+void ionvideo_close(){
+
 	amvideo_stop(amvideo);
 	amvideo_release(amvideo);
 }
 
-int ge2d_init(int width, int height)
-{
+int ge2d_init(int width, int height){
+
 	int ret;
 
 	memset(&amlge2d, 0, sizeof(aml_ge2d_t));
@@ -386,8 +386,8 @@ int ge2d_init(int width, int height)
 	return 0;
 }
 
-int ge2d_destroy(void)
-{
+int ge2d_destroy(void){
+
 	int i;
 
 	if (amlge2d.ge2dinfo.dst_info.mem_alloc_type == AML_GE2D_MEM_ION)
@@ -420,14 +420,21 @@ int ge2d_destroy(void)
 	return 0;
 }
 
+static cv::Scalar obj_id_to_color(int obj_id) {
 
-static void draw_results(IplImage *pImg, DetectResult resultData, int img_width, int img_height, det_model_type type)
-{
+	int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
+	int const offset = obj_id * 123457 % 6;
+	int const color_scale = 150 + (obj_id * 123457) % 100;
+	cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
+	color *= color_scale;
+	return color;
+}
+
+
+static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width, int img_height, det_model_type type){
+
 	int i = 0;
 	float left, right, top, bottom;
-	CvFont font;
-    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1,0,3,8);
-
 
 	for (i = 0; i < resultData.detect_num; i++) {
 		left =  resultData.point[i].point.rectPoint.left*img_width;
@@ -436,12 +443,9 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
         bottom = resultData.point[i].point.rectPoint.bottom*img_height;
 		
 //		cout << "i:" <<resultData.detect_num <<" left:" << left <<" right:" << right << " top:" << top << " bottom:" << bottom <<endl;
-		CvPoint pt1;
-		CvPoint pt2;
-		pt1=cvPoint(left,top);
-		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(255,10,10),3,4,0);
+		cv::Rect rect(left, top, right-left, bottom-top);
+		cv::rectangle(frame,rect,obj_id_to_color(resultData.result_name[i].lable_id),1,8,0);
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
@@ -454,7 +458,11 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					top = 50;
 					left +=10;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				int baseline;
+				cv::Size text_size = cv::getTextSize(resultData.result_name[i].lable_name, cv::FONT_HERSHEY_COMPLEX,0.5,1,&baseline);
+				cv::Rect rect1(left, top-20, text_size.width+10, 20);
+				cv::rectangle(frame,rect1,obj_id_to_color(resultData.result_name[i].lable_id),-1);
+				cv::putText(frame,resultData.result_name[i].lable_name,cvPoint(left+5,top-5),cv::FONT_HERSHEY_COMPLEX,0.5,cv::Scalar(0,0,0),1);
 				break;
 			}
 			default:
@@ -462,14 +470,13 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		}
 	}
 
-	cv::Mat sourceFrame = cvarrToMat(pImg);
-	cvtColor(sourceFrame, sourceFrame, CV_BGR2RGB);
-	cv::imshow("Image Window",sourceFrame);
+	cvtColor(frame, frame, CV_BGR2RGB);
+	cv::imshow("Image Window",frame);
 	cv::waitKey(1);
 }
 
-int run_detect_model(det_model_type type)
-{
+int run_detect_model(det_model_type type){
+
 	int ret = 0;
 	int nn_height, nn_width, nn_channel;
 	det_set_log_config(DET_DEBUG_LEVEL_WARN,DET_LOG_TERMINAL);
@@ -500,11 +507,11 @@ int run_detect_model(det_model_type type)
 	return ret;
 }
 
-static void *thread_func(void *x)
-{
-    IplImage *frame2process = NULL;
+static void *thread_func(void *x){
+
     int ret = 0;
 	DetectResult resultData;
+	cv::Mat img(height,width,CV_8UC3,cv::Scalar(0,0,0));
 
 	int frames = 0;
 	struct timeval time_start, time_end;
@@ -532,89 +539,88 @@ static void *thread_func(void *x)
 		return NULL;
 	}
 
-
-	frame2process = cvCreateImage(cvSize(MAX_WIDTH, MAX_HEIGHT), IPL_DEPTH_8U, 3);
 	gettimeofday(&time_start, 0);
 
 
-   while (true) {
+	while (true) {
 
-	   struct v4l2_buffer buffer = { 0 };
-	   buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	   buffer.memory = V4L2_MEMORY_MMAP;
+ 		struct v4l2_buffer buffer = { 0 };
+ 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+ 		buffer.memory = V4L2_MEMORY_MMAP;
 
-	   ret = ioctl(capture_fd, VIDIOC_DQBUF, &buffer);
-	   if (ret < 0) {
-	   	   printf("VIDIOC_DQBUF failed.\n");
-	   	   return NULL;
-	   }
+ 		ret = ioctl(capture_fd, VIDIOC_DQBUF, &buffer);
+ 		if (ret < 0) {
+ 			printf("VIDIOC_DQBUF failed.\n");
+ 			return NULL;
+ 		}
 
-	   isize = 0;
-	   do {
-	   	   ret = amlv4l_dequeuebuf(amvideo, &vf);
-	   	   if (ret >= 0) {
-	   		   //printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
-	   		   ret = amlv4l_queuebuf(amvideo, &vf);
-	   		   if (ret < 0) {
-	   			   //printf("amlv4l_queuebuf %d\n", ret);
-	   		   }
-	   	   } else {
-	   		   //printf("amlv4l_dequeuebuf %d\n", ret);
-	   		   //continue;
-	   	   }
+		isize = 0;
+ 		do {
+ 			ret = amlv4l_dequeuebuf(amvideo, &vf);
+ 			if (ret >= 0) {
+ 				//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
+ 				ret = amlv4l_queuebuf(amvideo, &vf);
+ 				if (ret < 0) {
+ 					//printf("amlv4l_queuebuf %d\n", ret);
+				}
+			} else {
+ 				//printf("amlv4l_dequeuebuf %d\n", ret);
+ 				//continue;
+ 			}
 
-	   	   ret = codec_write(&codec_context, (unsigned char*)buffer_mappings[buffer.index].start + isize, buffer.bytesused);
-	   	   if (ret < 0) {
-	   		   if (errno != EAGAIN) {
-	   			   printf("write data failed, errno %d\n", errno);
-	   			   return NULL;
-	   		   } else {
-	   			   continue;
-	   		   }
-	   	   } else {
-	   		   isize += ret;
-	   	   }
-	   } while (isize < buffer.bytesused);
-
-
-	   amlge2d.ge2dinfo.src_info[0].offset[0] = vbuffer[vf.index].phy_addr;
-
-	   amlge2d.ge2dinfo.src_info[0].rect.x = 0;
-	   amlge2d.ge2dinfo.src_info[0].rect.y = 0;
-	   amlge2d.ge2dinfo.src_info[0].rect.w = amlge2d.ge2dinfo.src_info[0].canvas_w;
-	   amlge2d.ge2dinfo.src_info[0].rect.h = amlge2d.ge2dinfo.src_info[0].canvas_h;
-
-	   amlge2d.ge2dinfo.dst_info.rect.x = 0;
-	   amlge2d.ge2dinfo.dst_info.rect.y = 0;
-	   amlge2d.ge2dinfo.dst_info.rect.w = MODEL_WIDTH;
-	   amlge2d.ge2dinfo.dst_info.rect.h = MODEL_HEIGHT;
-	   amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
-	   amlge2d.ge2dinfo.src_info[0].layer_mode = 0;
-	   amlge2d.ge2dinfo.src_info[0].plane_alpha = 0xff;
+ 			ret = codec_write(&codec_context, (unsigned char*)buffer_mappings[buffer.index].start + isize, buffer.bytesused);
+ 			if (ret < 0) {
+ 				if (errno != EAGAIN) {
+ 					printf("write data failed, errno %d\n", errno);
+ 					return NULL;
+				} else {
+ 					continue;
+ 				}
+ 			} else {
+ 				isize += ret;
+ 			}
+ 		} while (isize < buffer.bytesused);
 
 
-	   ret = aml_ge2d_process(&amlge2d.ge2dinfo);
-	   if (ret < 0) {
-	   	   printf("aml_ge2d_process failed!\n");
-	   	   return NULL;
-	   }
+ 		amlge2d.ge2dinfo.src_info[0].offset[0] = vbuffer[vf.index].phy_addr;
 
-	   // return buffer
-	   ret = ioctl(capture_fd, VIDIOC_QBUF, &buffer);
-	   if (ret < 0) {
-	   	   printf("VIDIOC_QBUF failed.\n");
-	   	   close_codec();
-	   	   return NULL;
-	   }
+ 		amlge2d.ge2dinfo.src_info[0].rect.x = 0;
+ 		amlge2d.ge2dinfo.src_info[0].rect.y = 0;
+ 		amlge2d.ge2dinfo.src_info[0].rect.w = amlge2d.ge2dinfo.src_info[0].canvas_w;
+		amlge2d.ge2dinfo.src_info[0].rect.h = amlge2d.ge2dinfo.src_info[0].canvas_h;
 
-	   // Syncronize the destination data
-	   ret = ion_sync_fd(ion_fd, vbuffer[vf.index].buffer.mImageFd);
-	   if (ret != 0) {
-	   	   printf("ion_sync_fd failed.\n");
-	   	   return NULL;
-	   }
+ 		amlge2d.ge2dinfo.dst_info.rect.x = 0;
+ 		amlge2d.ge2dinfo.dst_info.rect.y = 0;
+ 		amlge2d.ge2dinfo.dst_info.rect.w = MODEL_WIDTH;
+ 		amlge2d.ge2dinfo.dst_info.rect.h = MODEL_HEIGHT;
+ 		amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
+ 		amlge2d.ge2dinfo.src_info[0].layer_mode = 0;
+ 		amlge2d.ge2dinfo.src_info[0].plane_alpha = 0xff;
 
-	   frame2process->imageData=(char *)vbuffer[vf.index].ptr;
+
+	   
+		ret = aml_ge2d_process(&amlge2d.ge2dinfo);
+ 		if (ret < 0) {
+ 			printf("aml_ge2d_process failed!\n");
+ 			return NULL;
+ 		}
+
+ 		// return buffer
+ 		ret = ioctl(capture_fd, VIDIOC_QBUF, &buffer);
+ 		if (ret < 0) {
+ 			printf("VIDIOC_QBUF failed.\n");
+ 			close_codec();
+ 			return NULL;
+ 		}
+
+		// Syncronize the destination data
+		ret = ion_sync_fd(ion_fd, vbuffer[vf.index].buffer.mImageFd);
+		if (ret != 0) {
+ 			printf("ion_sync_fd failed.\n");
+			return NULL;
+ 		}
+
+ 		img.data = (unsigned char *)vbuffer[vf.index].ptr;
 
 		input_image_t image;
 		image.data      = (unsigned char*)amlge2d.ge2dinfo.dst_info.vaddr[0];
@@ -633,12 +639,11 @@ static void *thread_func(void *x)
 		ret = det_get_result(&resultData, g_model_type);
 		if (ret) {
 			cout << "det_get_result fail. ret=" << ret << endl;
-			det_release_model(g_model_type);
+	 		det_release_model(g_model_type);
 			goto out;
 		}
 
-		draw_results(frame2process, resultData, width, height, g_model_type);
-		memset(frame2process->imageData,0,1920*1080*3);
+		draw_results(img, resultData, width, height, g_model_type);
 		++frames;
 		gettimeofday(&time_end, 0);
 		total_time += (float)((time_end.tv_sec - time_start.tv_sec) + (time_end.tv_usec - time_start.tv_usec) / 1000.0f / 1000.0f);
@@ -656,8 +661,8 @@ out:
 	exit(-1);
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv){
+
 	int c;
 	int i=0,ret=0;
 	pthread_t tid[2];

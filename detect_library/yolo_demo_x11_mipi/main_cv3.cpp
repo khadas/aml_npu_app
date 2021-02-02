@@ -6,6 +6,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 #include <unistd.h>
 #include <iostream>
@@ -82,15 +83,13 @@ struct option longopts[] = {
 };
 
 
-typedef struct __video_buffer
-{
+typedef struct __video_buffer{
 	void *start;
 	size_t length;
 
 }video_buf_t;
 
-struct  Frame
-{   
+struct  Frame{   
 	size_t length;
 	int height;
 	int width;
@@ -101,8 +100,6 @@ struct  Frame
 int opencv_ok = 0;
 const char *device = DEFAULT_DEVICE;
 
-
-pthread_mutex_t mutex4q;
 
 unsigned char *displaybuf;
 int g_nn_height, g_nn_width, g_nn_channel;
@@ -117,8 +114,8 @@ det_model_type g_model_type = (det_model_type)2;
 }while(0)
 
 
-int ge2d_init(int width, int height)
-{
+int ge2d_init(int width, int height){
+
 	int ret;
 
 	memset(&amlge2d, 0, sizeof(aml_ge2d_t));
@@ -162,8 +159,8 @@ int ge2d_init(int width, int height)
 	return 0;
 }
 
-int ge2d_destroy(void)
-{
+int ge2d_destroy(void){
+
 	int i;
 
 	if (amlge2d.ge2dinfo.dst_info.mem_alloc_type == AML_GE2D_MEM_ION)
@@ -196,9 +193,19 @@ int ge2d_destroy(void)
 	return 0;
 }
 
+static cv::Scalar obj_id_to_color(int obj_id) {
 
-static void draw_results(IplImage *pImg, DetectResult resultData, int img_width, int img_height, det_model_type type)
-{
+	int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
+	int const offset = obj_id * 123457 % 6;
+	int const color_scale = 150 + (obj_id * 123457) % 100;
+	cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
+	color *= color_scale;
+	return color;
+}
+
+
+static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width, int img_height, det_model_type type){
+
 	int i = 0;
 	float left, right, top, bottom;
 	CvFont font;
@@ -216,7 +223,8 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 		pt1=cvPoint(left,top);
 		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(255,10,10),3,4,0);
+		cv::Rect rect(left, top, right-left, bottom-top);
+		cv::rectangle(frame,rect,obj_id_to_color(resultData.result_name[i].lable_id),1,8,0);
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
@@ -229,26 +237,24 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					top = 50;
 					left +=10;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				int baseline;
+				cv::Size text_size = cv::getTextSize(resultData.result_name[i].lable_name, cv::FONT_HERSHEY_COMPLEX,0.5,1,&baseline);
+				cv::Rect rect1(left, top-20, text_size.width+10, 20);
+				cv::rectangle(frame,rect1,obj_id_to_color(resultData.result_name[i].lable_id),-1);
+				cv::putText(frame,resultData.result_name[i].lable_name,cvPoint(left+5,top-5),cv::FONT_HERSHEY_COMPLEX,0.5,cv::Scalar(0,0,0),1);
 				break;
 			}
 			default:
 			break;
 		}
 	}
-
-		{
-
-            cv::Mat sourceFrame = cvarrToMat(pImg);
-            cv::imshow("Image Window",sourceFrame);
-            cv::waitKey(1);
-
-		}
+	cv::imshow("Image Window",frame);
+	cv::waitKey(1);
 }
 
 
-int run_detect_model(det_model_type type)
-{
+int run_detect_model(det_model_type type){
+
 	int ret = 0;
 	int nn_height, nn_width, nn_channel;
 
@@ -281,20 +287,18 @@ int run_detect_model(det_model_type type)
 }
 
 
-static void *thread_func(void *x)
-{
-    IplImage *frame2process = NULL;
-	cv::Mat frame_in(MAX_WIDTH, MAX_HEIGHT, CV_8UC3);
+static void *thread_func(void *x){
+
     int ret = 0,frames = 0;
 	float total_time = 0;
 	struct timeval time_start, time_end;
 	DetectResult resultData;
 
+	cv::Mat img(height,width,CV_8UC3,cv::Scalar(0,0,0));
+
     string str = device;
 
 	int video_width,video_height;
-
-	cv::Mat yolo_v2Image(g_nn_width, g_nn_height, CV_8UC1);
 
     string res=str.substr(10);
 	cv::VideoCapture cap(stoi(res));
@@ -321,40 +325,14 @@ static void *thread_func(void *x)
 	gettimeofday(&time_start, 0);
 
    while (true) {
-        pthread_mutex_lock(&mutex4q);
 
-		if(opencv_ok == 1)
-        {
-    		if (!cap.read(frame_in)) {
+    		if (!cap.read(img)) {
 				cout<<"Capture read error"<<std::endl;
 				break;
 			}
-        }
-        else
-        {
-            if(frame2process == NULL)
-                frame2process = cvCreateImage(cvSize(MAX_HEIGHT, MAX_WIDTH), IPL_DEPTH_8U, 3);
-            if (frame2process == NULL)
-            {
-                pthread_mutex_unlock(&mutex4q);
-                usleep(100000);
-                //printf("can't load temp bmp in thread to parse\n");
-                continue;
-                }
-            if(frame2process->width != MAX_HEIGHT)
-            {
-                printf("read image not MAX_HEIGHT width\n");
-                pthread_mutex_unlock(&mutex4q);
-                continue;
-            }
-            printf("prepare 1080p image ok\n");
-            opencv_ok = 1;   //zxw
-        }
-        pthread_mutex_unlock(&mutex4q);
 
-		*frame2process = IplImage(frame_in);
 
-		memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],frame2process->imageData,amlge2d.src_size[0]);
+		memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],img.data,amlge2d.src_size[0]);
 
 		amlge2d.ge2dinfo.src_info[0].rect.x = 0;
 
@@ -399,7 +377,7 @@ static void *thread_func(void *x)
 			goto out;
 		}
 
-		draw_results(frame2process, resultData, width, height, g_model_type);
+		draw_results(img, resultData, width, height, g_model_type);
 
 		// Measure FPS
 		++frames;
@@ -421,8 +399,8 @@ out:
 	exit(-1);
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv){
+
 	int c;
 	int i=0,ret=0;
 	pthread_t tid[2];
@@ -457,9 +435,6 @@ int main(int argc, char** argv)
 	if (ret < 0) {
 		printf("ge2d_init failed!\n");
 	}
-
-
-	pthread_mutex_init(&mutex4q,NULL);
 
 	if (0 != pthread_create(&tid[0], NULL, thread_func, NULL)) {
 		fprintf(stderr, "Couldn't create thread func\n");

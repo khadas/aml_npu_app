@@ -5,6 +5,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 #include <unistd.h>
 #include <stdio.h>
@@ -71,27 +72,26 @@ using namespace cv;
 #define DEFAULT_BITRATE (1000000 * 5)
 
 struct option longopts[] = {
-    { "device",         required_argument,  NULL,   'd' },
-    { "width",          required_argument,  NULL,   'w' },
-    { "height",         required_argument,  NULL,   'h' },
-    { "help",           no_argument,        NULL,   'H' },
-    { 0, 0, 0, 0 }
+	{ "device",         required_argument,  NULL,   'd' },
+	{ "width",          required_argument,  NULL,   'w' },
+	{ "height",         required_argument,  NULL,   'h' },
+	{ "help",           no_argument,        NULL,   'H' },
+	{ 0, 0, 0, 0 }
 };
 
 
-struct buffer_mapping
-{
-    void* start;
-    size_t length;
+struct buffer_mapping{	
+	void* start;
+	size_t length;
 };
 
 struct out_buffer_t {
-    int index;
-    int size;
-    bool own_by_v4l;
-    void *ptr;
-    IONMEM_AllocParams buffer;
-    unsigned long phy_addr;
+	int index;
+	int size;
+	bool own_by_v4l;
+	void *ptr;
+	IONMEM_AllocParams buffer;
+	unsigned long phy_addr;
 } vbuffer[MESON_BUFFER_SIZE];
 
 const char *device = DEFAULT_DEVICE;
@@ -131,15 +131,12 @@ struct amvideo_dev *amvideo;
 
 struct fb_var_screeninfo var_info;
 
-typedef struct __video_buffer
-{
+typedef struct __video_buffer{
 	void *start;
 	size_t length;
-
 }video_buf_t;
 
-struct  Frame
-{   
+struct  Frame{
 	size_t length;
 	int height;
 	int width;
@@ -176,8 +173,8 @@ det_model_type g_model_type;
 }while(0)
 
 
-int open_codec(int width, int height, int fps)
-{
+int open_codec(int width, int height, int fps){
+
 	int ret;
 	// Initialize the codec
 	memset(&codec_context, 0, sizeof(codec_context));
@@ -200,19 +197,19 @@ int open_codec(int width, int height, int fps)
 	return ret;
 }
 
-void reset_codec(void)
-{
+void reset_codec(void){
+
 	codec_reset(&codec_context);
 }
 
-void close_codec(void)
-{
+void close_codec(void){
+
 	codec_close(&codec_context);
 }
 
 
-int open_device_node(const char *path, int *pfd)
-{
+int open_device_node(const char *path, int *pfd){
+
 	if (NULL == path || NULL == pfd)
 		return -1;
     
@@ -230,26 +227,26 @@ int open_device_node(const char *path, int *pfd)
 }
 
 
-void close_device_node(int fd)
-{
+void close_device_node(int fd){
+
 	if (fd > 0)
 		close(fd);
 }
 
-void set_vfm_state(void)                                                                          
-{
+void set_vfm_state(void){
+
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "rm default");
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "add default decoder ionvideo");
 }
 
-void reset_vfm_state(void)
-{
+void reset_vfm_state(void){
+
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "rm default");
 	amsysfs_set_sysfs_str("/sys/class/vfm/map", "add default decoder ppmgr deinterlace amvideo");
 }
 
-void free_buffers(void)
-{
+void free_buffers(void){
+
 	int i; 
 	for (i = 0; i < MESON_BUFFER_SIZE; i++) {
 		if (vbuffer[i].ptr) {
@@ -262,8 +259,8 @@ void free_buffers(void)
 }
 
 
-int alloc_buffers(int width, int height)
-{
+int alloc_buffers(int width, int height){
+
 	int i = 0;
 	int size = 0;
 	int ret = -1;
@@ -310,8 +307,8 @@ fail:
 }
 
 
-static int ionvideo_init(int width, int height)
-{
+static int ionvideo_init(int width, int height){
+
 	int i, ret;
 
 	alloc_buffers(width, height);
@@ -348,14 +345,14 @@ fail:
 	return ret;
 }
 
-void ionvideo_close()
-{
+void ionvideo_close(){
+
 	amvideo_stop(amvideo);
 	amvideo_release(amvideo);
 }
 
-int ge2d_init(int width, int height)                                                         
-{
+int ge2d_init(int width, int height){
+
 	int ret;
 
 	memset(&amlge2d, 0, sizeof(aml_ge2d_t));
@@ -399,8 +396,8 @@ int ge2d_init(int width, int height)
 	return 0;
 }
 
-int ge2d_destroy(void)
-{
+int ge2d_destroy(void){
+
 	int i;
 
 	if (amlge2d.ge2dinfo.dst_info.mem_alloc_type == AML_GE2D_MEM_ION)
@@ -433,13 +430,20 @@ int ge2d_destroy(void)
 	return 0;
 }
 
+static cv::Scalar obj_id_to_color(int obj_id) {
 
-static void draw_results(IplImage *pImg, DetectResult resultData, int img_width, int img_height, det_model_type type)
-{
+	int const colors[6][3] = { { 1,0,1 },{ 0,0,1 },{ 0,1,1 },{ 0,1,0 },{ 1,1,0 },{ 1,0,0 } };
+	int const offset = obj_id * 123457 % 6;
+	int const color_scale = 150 + (obj_id * 123457) % 100;
+	cv::Scalar color(colors[offset][0], colors[offset][1], colors[offset][2]);
+	color *= color_scale;
+	return color;
+}
+
+static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width, int img_height, det_model_type type){
+
 	int i = 0;
 	float left, right, top, bottom;
-	CvFont font;
-    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1,0,3,8);
 
 	for (i = 0; i < resultData.detect_num; i++) {
 		left =  resultData.point[i].point.rectPoint.left*img_width;
@@ -448,12 +452,10 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
         bottom = resultData.point[i].point.rectPoint.bottom*img_height;
 		
 	//	cout << "i:" << i <<" left:" << left <<" right:" << right << " top:" << top << " bottom:" << bottom << "class:" << resultData.result_name[i].lable_name <<endl;
-		CvPoint pt1;
-		CvPoint pt2;
-		pt1=cvPoint(left,top);
-		pt2=cvPoint(right, bottom);
 
-		cvRectangle(pImg,pt1,pt2,CV_RGB(255,10,10),1,1,0);
+		cv::Rect rect(left, top, right-left, bottom-top);
+		cv::rectangle(frame,rect,obj_id_to_color(resultData.result_name[i].lable_id),1,8,0);
+
 		switch (type) {
 			case DET_YOLOFACE_V2:
 			break;
@@ -466,22 +468,26 @@ static void draw_results(IplImage *pImg, DetectResult resultData, int img_width,
 					top = 50;
 					left +=10;
 				}
-				cvPutText(pImg, resultData.result_name[i].lable_name, cvPoint(left,top-10), &font, CV_RGB(0,255,0));
+				int baseline;
+				cv::Size text_size = cv::getTextSize(resultData.result_name[i].lable_name, cv::FONT_HERSHEY_COMPLEX,0.5,1,&baseline);
+				cv::Rect rect1(left, top-20, text_size.width+10, 20);
+				cv::rectangle(frame,rect1,obj_id_to_color(resultData.result_name[i].lable_id),-1);
+				cv::putText(frame,resultData.result_name[i].lable_name,cvPoint(left+5,top-5),cv::FONT_HERSHEY_COMPLEX,0.5,cv::Scalar(0,0,0),1);
 				break;
 			}
 			default:
 			break;
 		}
 	}
-	memcpy(fbp+MAX_HEIGHT*MAX_WIDTH*3,pImg->imageData,MAX_HEIGHT*MAX_WIDTH*3);
+	memcpy(fbp+MAX_HEIGHT*MAX_WIDTH*3,frame.data,MAX_HEIGHT*MAX_WIDTH*3);
 	vinfo.activate = FB_ACTIVATE_NOW;
 	vinfo.vmode &= ~FB_VMODE_YWRAP;
 	vinfo.yoffset = 1080;
 	ioctl(fbfd, FBIOPAN_DISPLAY, &vinfo);
 }
 
-int run_detect_model(det_model_type type)
-{
+int run_detect_model(det_model_type type){
+
 	int ret = 0;
 	int nn_height, nn_width, nn_channel;
 
@@ -513,32 +519,29 @@ int run_detect_model(det_model_type type)
 	return ret;
 }
 
-static int init_fb(void)
-{
+static int init_fb(void){
+
 	printf("init_fb...\n");
 
-    // Open the file for reading and writing
-    fbfd = open("/dev/fb0", O_RDWR);
-    if (!fbfd)
-    {
-        printf("Error: cannot open framebuffer device.\n");
-        exit(1);
-    }
+	// Open the file for reading and writing
+	fbfd = open("/dev/fb0", O_RDWR);
+	if (!fbfd){
+		printf("Error: cannot open framebuffer device.\n");
+		exit(1);
+	}
 
-    // Get fixed screen information
-    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo))
-    {
+	// Get fixed screen information
+	if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)){
         printf("Error reading fixed information.\n");
         exit(2);
     }
 
-    // Get variable screen information
-    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo))
-    {
-        printf("Error reading variable information.\n");
-        exit(3);
-    }
-    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	// Get variable screen information
+	if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)){
+		printf("Error reading variable information.\n");
+		exit(3);
+	}
+	printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
 /*============add for display BGR begin================,for imx290,reverse color*/
 	vinfo.red.offset = 0;
 	vinfo.red.length = 8;
@@ -561,29 +564,27 @@ static int init_fb(void)
 	//vinfo.activate = FB_ACTIVATE_NOW;   //zxw
 	//vinfo.vmode &= ~FB_VMODE_YWRAP;
 	if (ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo) == -1) {
-        printf("Error reading variable information\n");
-    }
+		printf("Error reading variable information\n");
+	}
 /*============add for display BGR end ================*/	
-    // Figure out the size of the screen in bytes
-    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
+	// Figure out the size of the screen in bytes
+	screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 4;  //8 to 4
 
-    // Map the device to memory
-    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                       fbfd, 0);
+	// Map the device to memory
+	fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED,
+			fbfd, 0);
 
-    if (fbp == NULL)
-    {
-        printf("Error: failed to map framebuffer device to memory.\n");
-        exit(4);
-    }
+	if (fbp == NULL){
+		printf("Error: failed to map framebuffer device to memory.\n");
+		exit(4);
+	}
 	return 0;
 }
 
 
-static void *thread_func(void *x)
-{
-    IplImage *frame2process = NULL;
-	cv::Mat frame_in(MAX_WIDTH, MAX_HEIGHT, CV_8UC3);
+static void *thread_func(void *x){
+
+	cv::Mat frame(MAX_HEIGHT, MAX_WIDTH, CV_8UC3);
 	DetectResult resultData;
 
 	int ret;
@@ -614,10 +615,9 @@ static void *thread_func(void *x)
 	system(xcmd);
 	init_fb();
 
-	frame2process = cvCreateImage(cvSize(MAX_WIDTH, MAX_HEIGHT), IPL_DEPTH_8U, 3);
 	gettimeofday(&time_start, 0);
 
-   while (true) {
+ 	while (true) {
 		struct v4l2_buffer buffer = { 0 };
 		buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buffer.memory = V4L2_MEMORY_MMAP;
@@ -694,7 +694,7 @@ static void *thread_func(void *x)
 			return NULL;
 		}
 
-		frame2process->imageData=(char *)vbuffer[vf.index].ptr;
+		frame.data=(unsigned char *)vbuffer[vf.index].ptr;
 
 		input_image_t image;
 		image.data      = (unsigned char*)amlge2d.ge2dinfo.dst_info.vaddr[0];
@@ -719,8 +719,7 @@ static void *thread_func(void *x)
 			goto out;
 		}
 
-		draw_results(frame2process, resultData, width, height, g_model_type);
-		memset(frame2process->imageData,0,1920*1080*3);
+		draw_results(frame, resultData, width, height, g_model_type);
 		++frames;
 		gettimeofday(&time_end, 0);
 		total_time += (float)((time_end.tv_sec - time_start.tv_sec) + (time_end.tv_usec - time_start.tv_usec) / 1000.0f / 1000.0f);
@@ -738,8 +737,8 @@ out:
 	exit(-1);
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv){
+
 	int i;
 	int c;
 	int ret;
