@@ -184,8 +184,6 @@ static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width,
 {
 	int i = 0;
 	float left, right, top, bottom;
-	CvFont font;
-    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1,0,3,8);
 
 	cout << "\nresultData.detect_num=" << resultData.detect_num <<endl;
 	cout << "result type is " << resultData.point[i].type << endl;
@@ -235,7 +233,6 @@ static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width,
 static void crop_face(cv::Mat sourceFrame, cv::Mat& imageROI, DetectResult resultData, int img_height, int img_width) {
 	float left, right, top, bottom;
 	int tempw,temph;
-	CvFont font;
 
 	left =  resultData.point[0].point.rectPoint.left*img_width;
     right = resultData.point[0].point.rectPoint.right*img_width;
@@ -295,7 +292,7 @@ int run_detect_model(int argc, char** argv)
 	cout << "model.channel:" << nn_channel << "\n" <<endl;
 
 
-	cv::Mat frame = cv::imread(picture_path,CV_LOAD_IMAGE_COLOR);
+	cv::Mat frame = cv::imread(picture_path);
 	if (frame.empty()) {
 		cout << "Picture : "<< picture_path << " load fail" <<endl;
 		det_release_model(type);
@@ -387,7 +384,7 @@ int run_detect_facent(int argc, char** argv)
 		return ret;
 	}
 
-	cv::Mat frame = cv::imread(picture_path,CV_LOAD_IMAGE_COLOR);
+	cv::Mat frame = cv::imread(picture_path);
 	if (frame.empty()) {
 		cout << "Picture : "<< picture_path << " load fail" <<endl;
 		det_release_model(type);
