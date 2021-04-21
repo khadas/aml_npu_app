@@ -1,4 +1,5 @@
 include ./makefile.linux.def
+include ./makefile.target_name
 
 INCLUDE += -I$(VIVANTE_SDK_INC)
 INCLUDE += -I$(OVXLIB_DIR)/include
@@ -16,7 +17,6 @@ LIBS += -lm -ldl
 # Macros.
 PROGRAM = 1
 DYNAMIC      := 1
-TARGET_NAME = libnn_yolo_v3.so
 CUR_SOURCE = ${wildcard *.c}
 #############################################################################
 # Objects.
