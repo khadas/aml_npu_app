@@ -22,7 +22,7 @@ CUR_SOURCE = ${wildcard *.c}
 # Objects.
 OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
 
-LDFLAGS += -Wall -shared -Wl,-soname,$(TARGET_NAME) -Wl,-z,defs
+LDFLAGS += -Wall -shared -Wl,-soname,$(TARGET_NAME) -Wl,-z,defs -fpic
 
 # installation directory
 INSTALL_DIR := ./
