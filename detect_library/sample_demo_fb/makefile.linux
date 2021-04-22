@@ -1,4 +1,6 @@
 include ./makefile.linux.def
+include ./makefile.target_name
+
 INCLUDE += -I$(OPENCV_ROOT)/modules
 INCLUDE += -I$(OPENCV_ROOT)/modules/highgui/include
 INCLUDE += -I$(OPENCV_ROOT)/modules/core/include
@@ -30,7 +32,6 @@ LIBS += -lvpcodec -lamcodec -lamadec -lamvdec -lamavutils -lrt -lpthread -lge2d 
 #############################################################################
 # Macros.
 PROGRAM = 1
-TARGET_NAME = detect_demo
 CUR_SOURCE = ${wildcard *.c}
 #############################################################################
 # Objects.
