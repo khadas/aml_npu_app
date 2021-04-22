@@ -8,7 +8,7 @@ INCLUDE += -I./include
 CFLAGS += $(INCLUDE)
 
 ################################################################################
-LIBS += -L$(VIVANTE_SDK_LIB) -l OpenVX -l OpenVXU -l CLC -l VSC -lGAL
+LIBS += -L$(VIVANTE_SDK_LIB) -l OpenVX -l OpenVXU -l VSC -lGAL
 LIBS += -L$(OVXLIB_DIR)/lib -l ovxlib
 LIBS += -lm -ldl
 
