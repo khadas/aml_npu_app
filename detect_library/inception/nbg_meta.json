@@ -1,0 +1,36 @@
+{
+    "Inputs": {
+        "attach_input/out0_1": {
+            "name": "attach_input/out0",
+            "shape": [
+                1,
+                299,
+                299,
+                3
+            ],
+            "format": "nhwc",
+            "dtype": "asymmetric_affine",
+            "quantize": {
+                "qtype": "u8",
+                "zero_point": [
+                    128
+                ],
+                "scale": [
+                    0.0078125
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "attach_InceptionV3/Predictions/Reshape_1/out0_0": {
+            "name": "attach_InceptionV3/Predictions/Reshape_1/out0",
+            "shape": [
+                1,
+                1001
+            ],
+            "format": "nhwc",
+            "dtype": "float32"
+        }
+    },
+    "Recurrent_connections": {}
+}
