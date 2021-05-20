@@ -56,6 +56,16 @@ extern "C"  {
 	#include <codec.h>
 }
 
+struct option longopts[] = {
+       { "path",           required_argument,  NULL,   'p' },
+       { "width",          required_argument,  NULL,   'w' },
+       { "height",         required_argument,  NULL,   'h' },
+       { "facenet_f",      required_argument,  NULL,   'f' },
+       { "help",           no_argument,        NULL,   'H' },
+       { 0, 0, 0, 0 }
+};
+
+int facenet_falge = 0;
 
 // ge2d
 aml_ge2d_t amlge2d;
@@ -66,6 +76,8 @@ aml_ge2d_t amlge2d;
 int height = MAX_HEIGHT;
 int width = MAX_WIDTH;
 
+char* picture_path = NULL;
+det_model_type g_model_type;
 
 using namespace std;
 using namespace cv;
@@ -264,14 +276,8 @@ int run_detect_model(int argc, char** argv)
 	det_model_type type = DET_YOLOFACE_V2;
 	DetectResult resultData;
 
-	if (argc !=3) {
-		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " type  picture_path"<<endl;
-		return -1;
-	}
-	type = (det_model_type)atoi(argv[1]);
+	type = g_model_type;
 
-	char* picture_path = argv[2];
 	det_set_log_config(DET_DEBUG_LEVEL_WARN,DET_LOG_TERMINAL);
 	cout << "det_set_log_config Debug" <<endl;
 
@@ -356,20 +362,11 @@ int run_detect_model(int argc, char** argv)
 
 int run_detect_facent(int argc, char** argv)
 {
-	if (argc != 4) {
-		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " type  picture_path facenet_falge"<<endl;
-		cout << "facenet_falge: 0-->write to emb.db, 1--> facenet inference" <<endl;
-		return -1;
-	}
 
 	int ret = 0;
 	int nn_height, nn_width, nn_channel, img_width, img_height;
 	det_model_type type = DET_YOLOFACE_V2;
 	DetectResult resultData;
-
-	char* picture_path = argv[2];
-	int facenet_falge =(int)atoi(argv[3]);
 
 	det_set_log_config(DET_DEBUG_LEVEL_WARN,DET_LOG_TERMINAL);
 	//prepare model
@@ -612,12 +609,35 @@ static int init_fb(void)
 
 int main(int argc, char** argv)
 {
+	int c;
 	int ret;
-	det_model_type type;
-	if (argc < 3) {
-		cout << "input param error" <<endl;
-		cout << "Usage: " << argv[0] << " type  picture_path"<<endl;
-		return -1;
+
+	while ((c = getopt_long(argc, argv, "p:w:h:m:f:H", longopts, NULL)) != -1) {
+		switch (c) {
+			case 'p':
+				picture_path = optarg;
+				break;
+
+			case 'w':
+				width = atoi(optarg);
+				break;
+
+			case 'h':
+				height = atoi(optarg);
+				break;
+
+			case 'm':
+				g_model_type  = (det_model_type)atoi(optarg);
+				break;
+
+			case 'f':
+				facenet_falge = atoi(optarg);
+				break;
+
+			default:
+				printf("%s [-p picture path] [-w width] [-h height] [-m model type] [-f facenet flag] [-H]\n", argv[0]);
+				exit(1);
+		}
 	}
 
 	system(xcmd);
@@ -628,9 +648,7 @@ int main(int argc, char** argv)
 		printf("ge2d_init failed!\n");
 	}
 
-
-	type = (det_model_type)atoi(argv[1]);
-	switch (type) {
+	switch (g_model_type) {
 		case DET_YOLOFACE_V2:
 		case DET_YOLO_V2:
 		case DET_YOLO_TINY:
@@ -643,7 +661,7 @@ int main(int argc, char** argv)
 			run_detect_facent(argc, argv);
 			break;
 		default:
-			cerr << "not support type=" << type <<endl;
+			cerr << "not support type=" << g_model_type <<endl;
 			break;
 	}
 
