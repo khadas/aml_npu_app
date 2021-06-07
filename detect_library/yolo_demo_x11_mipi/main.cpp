@@ -208,8 +208,6 @@ static void draw_results(cv::Mat& frame, DetectResult resultData, int img_width,
 
 	int i = 0;
 	float left, right, top, bottom;
-	CvFont font;
-    cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1,0,3,8);
 
 	for (i = 0; i < resultData.detect_num; i++) {
 		left =  resultData.point[i].point.rectPoint.left*img_width;
@@ -302,8 +300,8 @@ static void *thread_func(void *x){
 
     string res=str.substr(10);
 	cv::VideoCapture cap(stoi(res));
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, width);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT, height);
+    cap.set(CAP_PROP_FRAME_WIDTH, width);
+    cap.set(CAP_PROP_FRAME_HEIGHT, height);
 
 	if (!cap.isOpened()) {
 		cout << "capture device failed to open!" << endl;
@@ -313,8 +311,8 @@ static void *thread_func(void *x){
 
 	cout << "open video successfully!" << endl;
 
-	video_width = cap.get(CV_CAP_PROP_FRAME_WIDTH);
-	video_height = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+	video_width = cap.get(CAP_PROP_FRAME_WIDTH);
+	video_height = cap.get(CAP_PROP_FRAME_HEIGHT);
 
 	printf("video_width: %d, video_height: %d\n", video_width, video_height);
 
