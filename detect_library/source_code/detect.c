@@ -129,10 +129,7 @@ static int find_string_index(char* buffer, char* str, int lenght)
 
 static void check_and_set_dev_type()
 {
-	#define len 1280
-	int index = 0;
-	char buffer[len] = {0};
-	memset(buffer, 0, sizeof(buffer));
+	char line[120];
 
 	FILE* fp = popen("cat /proc/cpuinfo", "r");
 	if (!fp) {
@@ -140,28 +137,19 @@ static void check_and_set_dev_type()
 		g_dev_type = DEV_REVA;
 		return ;
 	}
-	int length = fread(buffer,1,len,fp);
-	index = find_string_index(buffer, "290", length);
 
-	LOGD("Read Cpuinfo:\n%s\n",buffer);
-	LOGD("290 index=%d",index);
-	switch (buffer[index+3]) {
-		case 'a':
-			LOGI("set_dev_type REVA and setenv 0");
-			g_dev_type = DEV_REVA;
-			setenv("DEV_TYPE", "0", 0);
+	while(NULL != fgets(line, 120, fp))
+		if(0 == strncmp(line, "Hardware", 8))
 			break;
-		case 'b':
-			LOGI("set_dev_type REVB and setenv 1");
-			g_dev_type = DEV_REVB;
-			setenv("DEV_TYPE", "1", 0);
-			break;
-		default:
-			LOGI("set_dev_type DEV_MS1 and setenv 2 index=%d char:%c", index, buffer[index+3]);
-			g_dev_type = DEV_MS1;
-			setenv("DEV_TYPE", "2", 0);
-			break;
+
+	if(strstr(line, "VIM3L")){
+		g_dev_type = DEV_MS1;
+		setenv("DEV_TYPE", "2", 0);
+	}else{
+		g_dev_type = DEV_REVB;
+		setenv("DEV_TYPE", "1", 0);
 	}
+
 	pclose(fp);
 }
 
