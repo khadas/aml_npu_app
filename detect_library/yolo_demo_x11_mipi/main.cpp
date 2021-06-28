@@ -7,6 +7,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/types_c.h>
+#include <opencv2/opencv.hpp>
 
 #include <unistd.h>
 #include <iostream>
@@ -33,32 +34,11 @@
 #include <poll.h>
 #include <semaphore.h>
 #include <sys/resource.h>
-
 #include <getopt.h>
-#include <vpcodec_1_0.h>
-#include <linux/meson_ion.h>
-#include <linux/ge2d.h>
-#include <linux/fb.h>
-#include <ge2d_port.h>
-#include <aml_ge2d.h>
-
-#include <ion/ion.h>
-#include <ion/IONmem.h>
-#include <linux/ion.h>
-#include <Amsysfsutils.h>
-
 
 #include "nn_detect.h"
 #include "nn_detect_utils.h"
 
-// The headers are not aware C++ exists
-extern "C"  {
-    #include <amvideo.h>
-    #include <codec.h>
-}
-
-// ge2d
-aml_ge2d_t amlge2d;
 
 using namespace std;
 using namespace cv;
@@ -83,12 +63,6 @@ struct option longopts[] = {
 };
 
 
-typedef struct __video_buffer{
-	void *start;
-	size_t length;
-
-}video_buf_t;
-
 struct  Frame{   
 	size_t length;
 	int height;
@@ -96,8 +70,8 @@ struct  Frame{
 	unsigned char data[MAX_HEIGHT * MAX_WIDTH * 3];
 } frame;
 
+pthread_mutex_t mutex4q;
 
-int opencv_ok = 0;
 const char *device = DEFAULT_DEVICE;
 
 
@@ -114,84 +88,6 @@ det_model_type g_model_type = (det_model_type)2;
 }while(0)
 
 
-int ge2d_init(int width, int height){
-
-	int ret;
-
-	memset(&amlge2d, 0, sizeof(aml_ge2d_t));
-	memset(&(amlge2d.ge2dinfo.src_info[0]), 0, sizeof(buffer_info_t));
-	memset(&(amlge2d.ge2dinfo.src_info[1]), 0, sizeof(buffer_info_t));
-	memset(&(amlge2d.ge2dinfo.dst_info), 0, sizeof(buffer_info_t));
-
-	amlge2d.ge2dinfo.src_info[0].canvas_w = width;
-	amlge2d.ge2dinfo.src_info[0].canvas_h = height;
-	amlge2d.ge2dinfo.src_info[0].format = PIXEL_FORMAT_RGB_888;
-	amlge2d.ge2dinfo.src_info[0].plane_number = 1;
-
-	amlge2d.ge2dinfo.dst_info.canvas_w = MODEL_WIDTH;
-	amlge2d.ge2dinfo.dst_info.canvas_h = MODEL_HEIGHT;
-	amlge2d.ge2dinfo.dst_info.format = PIXEL_FORMAT_RGB_888;
-	amlge2d.ge2dinfo.dst_info.plane_number = 1;
-	amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
-	amlge2d.ge2dinfo.offset = 0;
-	amlge2d.ge2dinfo.ge2d_op = AML_GE2D_STRETCHBLIT;
-	amlge2d.ge2dinfo.blend_mode = BLEND_MODE_PREMULTIPLIED;
-
-	amlge2d.ge2dinfo.src_info[0].memtype = GE2D_CANVAS_ALLOC;
-	amlge2d.ge2dinfo.src_info[1].memtype = GE2D_CANVAS_TYPE_INVALID;
-	amlge2d.ge2dinfo.dst_info.memtype = GE2D_CANVAS_ALLOC;
-	amlge2d.ge2dinfo.src_info[0].mem_alloc_type = AML_GE2D_MEM_ION;//AML_GE2D_MEM_DMABUF
-	amlge2d.ge2dinfo.src_info[1].mem_alloc_type = AML_GE2D_MEM_INVALID;//AML_GE2D_MEM_ION;
-	amlge2d.ge2dinfo.dst_info.mem_alloc_type = AML_GE2D_MEM_ION;
-
-	ret = aml_ge2d_init(&amlge2d);
-	if (ret < 0) {
-		printf("aml_ge2d_init failed!\n");
-		return -1;
-	}
-
-	ret = aml_ge2d_mem_alloc(&amlge2d);
-	if (ret < 0) {
-		printf("aml_ge2d_mem_alloc failed!\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-int ge2d_destroy(void){
-
-	int i;
-
-	if (amlge2d.ge2dinfo.dst_info.mem_alloc_type == AML_GE2D_MEM_ION)
-		aml_ge2d_invalid_cache(&amlge2d.ge2dinfo);
-
-	for (i = 0; i < amlge2d.ge2dinfo.src_info[0].plane_number; i++) {
-		if (amlge2d.src_data[i]) {
-			free(amlge2d.src_data[i]);
-			amlge2d.src_data[i] = NULL;
-		}
-	}
-
-	for (i = 0; i < amlge2d.ge2dinfo.src_info[1].plane_number; i++) {
-		if (amlge2d.src2_data[i]) {
-			free(amlge2d.src2_data[i]);
-			amlge2d.src2_data[i] = NULL;
-		}
-	}
-
-	for (i = 0; i < amlge2d.ge2dinfo.dst_info.plane_number; i++) {
-		if (amlge2d.dst_data[i]) {
-			free(amlge2d.dst_data[i]);
-			amlge2d.dst_data[i] = NULL;
-		}
-	}
-
-	aml_ge2d_mem_free(&amlge2d);
-	aml_ge2d_exit(&amlge2d);
-
-	return 0;
-}
 
 static cv::Scalar obj_id_to_color(int obj_id) {
 
@@ -292,6 +188,7 @@ static void *thread_func(void *x){
 	struct timeval time_start, time_end;
 	DetectResult resultData;
 
+	cv::Mat yolo_v2Image(g_nn_width, g_nn_height, CV_8UC1);
 	cv::Mat img(height,width,CV_8UC3,cv::Scalar(0,0,0));
 
     string str = device;
@@ -323,42 +220,20 @@ static void *thread_func(void *x){
 	gettimeofday(&time_start, 0);
 
    while (true) {
+	   pthread_mutex_lock(&mutex4q);
+	   if (!cap.read(img)) {
+		   cout<<"Capture read error"<<std::endl;
+		   break;
+	   }
+	   pthread_mutex_unlock(&mutex4q);
 
-    		if (!cap.read(img)) {
-				cout<<"Capture read error"<<std::endl;
-				break;
-			}
-
-
-		memcpy(amlge2d.ge2dinfo.src_info[0].vaddr[0],img.data,amlge2d.src_size[0]);
-
-		amlge2d.ge2dinfo.src_info[0].rect.x = 0;
-
-		amlge2d.ge2dinfo.src_info[0].rect.y = 0;
-		amlge2d.ge2dinfo.src_info[0].rect.w = amlge2d.ge2dinfo.src_info[0].canvas_w;
-		amlge2d.ge2dinfo.src_info[0].rect.h = amlge2d.ge2dinfo.src_info[0].canvas_h;
-
-		amlge2d.ge2dinfo.dst_info.rect.x = 0;
-		amlge2d.ge2dinfo.dst_info.rect.y = 0;
-		amlge2d.ge2dinfo.dst_info.rect.w = MODEL_WIDTH;
-		amlge2d.ge2dinfo.dst_info.rect.h = MODEL_HEIGHT;
-		amlge2d.ge2dinfo.dst_info.rotation = GE2D_ROTATION_0;
-		amlge2d.ge2dinfo.src_info[0].layer_mode = 0;
-		amlge2d.ge2dinfo.src_info[0].plane_alpha = 0xff;
-
-
-		ret = aml_ge2d_process(&amlge2d.ge2dinfo);
-		if (ret < 0) {
-			printf("aml_ge2d_process failed!\n");
-			return NULL;
-		}
-
+	   cv::resize(img, yolo_v2Image, yolo_v2Image.size());
 
 		input_image_t image;
-		image.data      = (unsigned char*)amlge2d.ge2dinfo.dst_info.vaddr[0];
-		image.width     = MODEL_WIDTH;
-		image.height    = MODEL_HEIGHT;
-		image.channel   = 3;
+		image.data      = yolo_v2Image.data;
+		image.width     = yolo_v2Image.cols;
+		image.height    = yolo_v2Image.rows;
+		image.channel   = yolo_v2Image.channels();
 		image.pixel_format = PIX_FMT_RGB888;
 
 		ret = det_set_input(image, g_model_type);
@@ -427,12 +302,10 @@ int main(int argc, char** argv){
 		}
 	}
 
+	pthread_mutex_init(&mutex4q,NULL);
+
 	run_detect_model(g_model_type);
 
-	ret = ge2d_init(width, height);
-	if (ret < 0) {
-		printf("ge2d_init failed!\n");
-	}
 
 	if (0 != pthread_create(&tid[0], NULL, thread_func, NULL)) {
 		fprintf(stderr, "Couldn't create thread func\n");
