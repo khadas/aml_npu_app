@@ -83,6 +83,7 @@ struct option longopts[] = {
 struct buffer_mapping{
 	void* start;
 	size_t length;
+	size_t ext_length;
 };
 
 struct out_buffer_t {
@@ -325,6 +326,17 @@ int alloc_buffers(int width, int height){
 
 fail:
 	return ret;
+}
+
+void write_codec_data(unsigned char* data, int data_length)
+{
+       int isize = 0;
+       while (isize < data_length) {
+               int ret = codec_write(&codec_context, data + isize, data_length);
+               if (ret > 0) {
+                       isize += ret;
+               }
+       }
 }
 
 static int ionvideo_init(int width, int height){
@@ -615,6 +627,17 @@ static void *thread_func(void *x){
 
 		if (needs_mjpeg_dht)
 		{
+			ret = amlv4l_dequeuebuf(amvideo, &vf);
+			if (ret >= 0) {
+				//printf("%d vf idx%d pts 0x%x\n", __LINE__, vf.index, vf.pts);
+				ret = amlv4l_queuebuf(amvideo, &vf);
+				if (ret < 0) {
+					//printf("amlv4l_queuebuf %d\n", ret);
+				}
+			} else {
+				//printf("%d amlv4l_dequeuebuf %d\n", __LINE__, ret);
+			}
+
 			// Find the start of scan (SOS)
 			unsigned char* sos = data;
 			while (sos < data + data_length - 1)
@@ -624,121 +647,29 @@ static void *thread_func(void *x){
 				++sos;
 			}
 
-			// Send everthing up to SOS
 			int header_length = sos - data;
 
-			isize = 0;
-			do {
-				ret = amlv4l_dequeuebuf(amvideo, &vf);
-				if (ret >= 0) {
-					//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
-					ret = amlv4l_queuebuf(amvideo, &vf);
-					if (ret < 0) {
-						//printf("amlv4l_queuebuf %d\n", ret);
-					}
-				} else {
-					//printf("amlv4l_dequeuebuf %d\n", ret);
-					//continue;
-				}
+			// append MJPEG DHT
+			int j = 0;
+			for (j=0; j<data_length-header_length; j++)
+				data[data_length - j - 1 + MJPEG_DHT_LENGTH] = data[data_length - j - 1];
+			memcpy(data + header_length, mjpeg_dht, MJPEG_DHT_LENGTH);
+			write_codec_data(data, data_length + MJPEG_DHT_LENGTH);
 
-				ret = codec_write(&codec_context, data + isize, header_length);
-				if (ret < 0) {
-					if (errno != EAGAIN) {
-						printf("write data failed, errno %d\n", errno);
-						return NULL;
-					} else {
-						continue;
-					}
-				} else {   
-		   			isize += ret;
-				}
-			} while (isize < header_length);
-
-			// Send DHT
-	  		isize = 0;
-	  		do {
-				ret = amlv4l_dequeuebuf(amvideo, &vf);
-				if (ret >= 0) {
-	  				//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
-	  				ret = amlv4l_queuebuf(amvideo, &vf);
-	  				if (ret < 0) {
-	  					//printf("amlv4l_queuebuf %d\n", ret);
-	  				}
-	  			} else {
-	  				//printf("amlv4l_dequeuebuf %d\n", ret);
-	  				//continue;
-	  			}
-
-	  			ret = codec_write(&codec_context, mjpeg_dht + isize, MJPEG_DHT_LENGTH);
-	  			if (ret < 0) {
-	  				if (errno != EAGAIN) {
-	  					printf("write data failed, errno %d\n", errno);
-	  					return NULL;
-	  				} else {
-	  					continue;
-	  				}
-	  			} else {
-	  				isize += ret;
-	  			}
-	  		} while (isize < MJPEG_DHT_LENGTH);
-
-
-	  		// Send remaining data
-	  		isize = 0;
-	  		do {
-	  			ret = amlv4l_dequeuebuf(amvideo, &vf);
-	  			if (ret >= 0) {
-	  				//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
-	  				ret = amlv4l_queuebuf(amvideo, &vf);
-	  				if (ret < 0) {
-	  					//printf("amlv4l_queuebuf %d\n", ret);
-	  				}
-	  			} else {
-	  				//printf("amlv4l_dequeuebuf %d\n", ret);
-	  				//continue;
-	  			}
-
-	  			ret = codec_write(&codec_context, sos + isize, data_length - header_length);
-	  			if (ret < 0) {
-	  				if (errno != EAGAIN) {
-	  					printf("write data failed, errno %d\n", errno);
-	  					return NULL;
-	  				} else {
-	  					continue;
-	  				}
-	  			} else {
-	  				isize += ret;
-	  			}
-	  		} while (isize < (data_length - header_length));
-
-	  		printf("data_length=%lu, found SOS @ %d\n", data_length, header_length);
 		} else {
-	  		isize = 0;
-	  		do {
-	  			ret = amlv4l_dequeuebuf(amvideo, &vf);
-	  			if (ret >= 0) {
-	  				//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
-	  				ret = amlv4l_queuebuf(amvideo, &vf);
-	  				if (ret < 0) {
-	  					//printf("amlv4l_queuebuf %d\n", ret);
-	  				}
-	  			} else {
-	  				//printf("amlv4l_dequeuebuf %d\n", ret);
-	  				//continue;
-	  			}
+			ret = amlv4l_dequeuebuf(amvideo, &vf);
+			if (ret >= 0) {
+				//printf("vf idx%d pts 0x%x\n", vf.index, vf.pts);
+				ret = amlv4l_queuebuf(amvideo, &vf);
+				if (ret < 0) {
+					//printf("amlv4l_queuebuf %d\n", ret);
+				}
+			} else {
+				//printf("amlv4l_dequeuebuf %d\n", ret);
+			}
 
-	  			ret = codec_write(&codec_context, (unsigned char*)buffer_mappings[buffer.index].start + isize, buffer.bytesused);
-	  			if (ret < 0) {
-	  				if (errno != EAGAIN) {
-	  					printf("write data failed, errno %d\n", errno);
-	  					return NULL;
-	  				} else {
-	  					continue;
-	  				}
-	  			} else {
-	  				isize += ret;
-	  			}
-	  		} while (isize < buffer.bytesused);
+			write_codec_data((unsigned char*)buffer_mappings[buffer.index].start, buffer.bytesused);
+
 	  	}
 
  		amlge2d.ge2dinfo.src_info[0].offset[0] = vbuffer[vf.index].phy_addr;
@@ -922,7 +853,8 @@ int main(int argc, char** argv){
 			exit(1);
 		}
 
-		buffer_mappings[i].length = buffer.length;
+		buffer_mappings[i].ext_length = MJPEG_DHT_LENGTH;
+		buffer_mappings[i].length = buffer.length + buffer_mappings[i].ext_length;
 		buffer_mappings[i].start = mmap(NULL, buffer.length,
 				PROT_READ | PROT_WRITE, /* recommended */
 				MAP_SHARED,             /* recommended */
