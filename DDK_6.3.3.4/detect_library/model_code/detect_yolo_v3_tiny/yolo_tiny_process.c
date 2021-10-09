@@ -330,7 +330,7 @@ void yolo_tiny_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
         }
         vsi_nn_Free(tensor_data);
     }
-    float biases[12] = {10/8., 14/8., 23/8., 27/8., 37/16., 58/16., 81/16., 82/16., 135/32., 169/32., 344/32., 319/32.,};
+    float biases[12] = {0.625, 0.875, 1.4375, 1.6875, 2.3125, 3.625, 2.53125, 2.5625, 4.2187, 5.28125, 10.75, 9.96875,};
     int size2[3] = {size[0]*2,size[1]*2,size[2]};
     int len1 = size[0]*size[1]*size[2];
     int box1 = len1/(num_class+5);
