@@ -9,7 +9,7 @@
                 3
             ],
             "format": "nhwc",
-            "dtype": "asymmetric_affine",
+            "quantizer": "asymmetric_affine",
             "quantize": {
                 "qtype": "u8",
                 "zero_point": [
