@@ -22,7 +22,7 @@ CXXFLAGS += $(INCLUDE) -std=c++11 -std=gnu++11 -Wall -std=c++11
 #LIBS +=  -lpthread -ldl
 LIBS += -L$(OPENCV_ROOT)/lib  -lopencv_imgproc -lopencv_core -lopencv_videoio -lopencv_imgcodecs -lopencv_highgui -lz -lm
 
-LIBS += -L$(VIVANTE_SDK_LIB) -lOpenVX -lOpenVXU -lVSC -lGAL -lovxlib -lArchModelSw -lNNArchPerf
+LIBS += -L$(VIVANTE_SDK_LIB) -lOpenVX -lOpenVXU -lGAL -lovxlib -lArchModelSw -lNNArchPerf
 
 LIBS += -L../source_code/bin_r -lnn_detect
 
