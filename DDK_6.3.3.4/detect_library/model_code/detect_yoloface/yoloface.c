@@ -5,6 +5,35 @@
 
 vsi_nn_graph_t * g_graph = NULL;
 
+const static vsi_nn_postprocess_map_element_t* postprocess_map = NULL;
+const static vsi_nn_preprocess_map_element_t* preprocess_map = NULL;
+
+const vsi_nn_preprocess_map_element_t * vnn_GetPrePorcessMap()
+{
+    return preprocess_map;
+}
+
+uint32_t vnn_GetPrePorcessMapCount()
+{
+    if (preprocess_map == NULL)
+        return 0;
+    else
+        return sizeof(preprocess_map) / sizeof(vsi_nn_preprocess_map_element_t);
+}
+
+const vsi_nn_postprocess_map_element_t * vnn_GetPostPorcessMap()
+{
+    return postprocess_map;
+}
+
+uint32_t vnn_GetPostPorcessMapCount()
+{
+    if (postprocess_map == NULL)
+        return 0;
+    else
+        return sizeof(postprocess_map) / sizeof(vsi_nn_postprocess_map_element_t);
+}
+
 det_status_t model_create(const char * data_file_path, dev_type type)
 {
 	det_status_t ret = DET_STATUS_ERROR;
@@ -24,11 +53,14 @@ det_status_t model_create(const char * data_file_path, dev_type type)
 		default:
 			break;
 	}
-	g_graph = vnn_CreateYoloFace(model_path, NULL);
-	_CHECK_PTR(g_graph, exit);
+	g_graph = vnn_CreateYoloface(model_path, NULL,
+			vnn_GetPrePorcessMap(), vnn_GetPrePorcessMapCount(),
+			vnn_GetPostPorcessMap(), vnn_GetPostPorcessMapCount());
+
+	TEST_CHECK_PTR(g_graph, exit);
 
 	status = vsi_nn_VerifyGraph(g_graph);
-	_CHECK_STATUS(status, exit);
+	TEST_CHECK_STATUS(status, exit);
 
 	ret = DET_STATUS_OK;
 exit:
@@ -59,10 +91,10 @@ det_status_t model_getresult(pDetResult resultData, uint8_t* data)
 	vsi_nn_tensor_t *tensor = vsi_nn_GetTensor(g_graph, g_graph->input.tensors[0]);
 
 	status = vsi_nn_CopyDataToTensor(g_graph, tensor, data);
-	_CHECK_STATUS(status, exit);
+	TEST_CHECK_STATUS(status, exit);
 
 	status = vsi_nn_RunGraph(g_graph);
-	_CHECK_STATUS(status, exit);
+	TEST_CHECK_STATUS(status, exit);
 
 	yolo_face_postprocess(g_graph, resultData);
 
@@ -73,6 +105,6 @@ exit:
 
 void model_release(dev_type type)
 {
-	vnn_ReleaseYoloFace(g_graph, TRUE);
+	vnn_ReleaseYoloface(g_graph, TRUE);
 	g_graph = NULL;
 }

@@ -237,7 +237,7 @@ static int yolo_post_process(pDetResult resultData, float *predictions, int mode
     int num_class = 1;
     int num_box = 5;
     int grid_size = 13;
-    float biases[10] = {1.08,1.19,  3.42,4.41,  6.63,11.38,  9.42,5.11,  16.62,10.52};
+    float biases[10] = {0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828};
 
     box *boxes = (box *)calloc(modelWidth*modelHeight*num_box, sizeof(box));
     float **probs = (float **)calloc(modelWidth*modelHeight*num_box, sizeof(float *));
