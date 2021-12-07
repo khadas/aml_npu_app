@@ -52,7 +52,7 @@
 #include "nn_detect_utils.h"
 
 // The headers are not aware C++ exists 
-extern "C"  {    
+extern "C"  {
 	#include <amvideo.h>
 	#include <codec.h> 
 }
@@ -791,6 +791,7 @@ static void *thread_func(void *x){
 		image.channel   = 3;
 		image.pixel_format = PIX_FMT_RGB888;
 
+		gettimeofday(&time_start, 0);
 		ret = det_set_input(image, g_model_type);
 		if (ret) {
 			cout << "det_set_input fail. ret=" << ret << endl;
@@ -806,20 +807,19 @@ static void *thread_func(void *x){
 			det_release_model(g_model_type);
 			goto out;
 		}
+		gettimeofday(&time_end, 0);
 
 		draw_results(frame, resultData, width, height, g_model_type);
 		++frames;
-		gettimeofday(&time_end, 0);
 		total_time += (float)((time_end.tv_sec - time_start.tv_sec) + (time_end.tv_usec - time_start.tv_usec) / 1000.0f / 1000.0f);
-	   	gettimeofday(&time_start, 0);
 
 	   	if (total_time >= 1.0f) {
 	   		int fps = (int)(frames / total_time);
-	   		fprintf(stderr, "FPS: %i\n", fps);
+			fprintf(stderr, "Inference FPS: %i\n", fps);
 	   		frames = 0;
 	   		total_time = 0;
 	   	}
-    }
+	}
 out:
 	printf("thread_func exit\n");
 	exit(-1);
