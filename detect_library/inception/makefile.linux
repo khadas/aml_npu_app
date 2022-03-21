@@ -1,16 +1,6 @@
 include ./makefile.linux.def
 include ./makefile.target_name
 
-INCLUDE += -I$(OPENCV_ROOT)/modules
-INCLUDE += -I$(OPENCV_ROOT)/modules/highgui/include
-INCLUDE += -I$(OPENCV_ROOT)/modules/core/include
-INCLUDE += -I$(OPENCV_ROOT)/modules/imgproc/include
-INCLUDE += -I$(OPENCV_ROOT)/modules/objdetect/include
-INCLUDE += -I$(OPENCV_ROOT)/modules/imgcodecs/include
-INCLUDE += -I$(OPENCV_ROOT)/modules/videoio/include 
-INCLUDE += -I$(OPENCV4_ROOT)
-INCLUDE += -I. 
-
 INCLUDE += -I$(VIVANTE_SDK_INC)
 
 CXXFLAGS += $(INCLUDE) -std=c++11 -std=gnu++11 -Wall -std=c++11
@@ -20,11 +10,7 @@ CXXFLAGS += $(INCLUDE) -std=c++11 -std=gnu++11 -Wall -std=c++11
 #LIBS += $(OVXLIB_DIR)/lib/libjpeg.a
 
 #LIBS +=  -lpthread -ldl
-LIBS += -L$(OPENCV_ROOT)/lib  -lopencv_imgproc -lopencv_core -lopencv_videoio -lopencv_imgcodecs -lopencv_highgui -lz -lm
-
 LIBS += -L$(VIVANTE_SDK_LIB) -lOpenVX -lOpenVXU -lGAL -lovxlib -lArchModelSw -lNNArchPerf
-
-LIBS += -L../source_code/bin_r -lnn_detect
 
 #LIBS +=-L$(LIB_DIR) -lstdc++
 LIBS += -lvpcodec -lamcodec -lamadec -lamvdec -lamavutils -lrt -lpthread -lge2d -lion -ljpeg
