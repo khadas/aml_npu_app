@@ -29,7 +29,7 @@
                 1001
             ],
             "format": "nhwc",
-            "dtype": "float32"
+            "dtype": "float16"
         }
     },
     "Recurrent_connections": {}
