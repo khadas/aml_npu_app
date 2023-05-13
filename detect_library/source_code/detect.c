@@ -67,6 +67,7 @@ const char * so_file_name[DET_BUTT]= {
 	"libnn_deeplab_v2.so",
 	"libnn_deeplab_v3.so",
 	"libnn_facenet.so",
+	"libnn_yolo_v7_tiny.so",
 };
 
 static det_status_t check_input_param(input_image_t imageData, det_model_type modelType)
