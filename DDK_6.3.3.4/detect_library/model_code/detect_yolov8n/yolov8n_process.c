@@ -4,8 +4,8 @@
 #include <math.h>
 #include <float.h>
 
-#include "yolov7_tiny_process.h"
-#include "yolo_v7_tiny.h"
+#include "yolov8n_process.h"
+#include "yolov8n.h"
 
 #define NN_TENSOR_MAX_DIMENSION_NUMBER 4
 
@@ -200,13 +200,31 @@ static void get_detections_result(pDetResult resultData, int num, float thresh, 
 
 static float logistic_activate(float x){return 1./(1. + exp(-x));}
 
-static box get_region_box(float *x, float *biases, int n, int index, int i, int j, int w, int h)
+static box get_region_box(float *x, int index, int i, int j, int w, int h)
 {
     box b;
-    b.x = (i + logistic_activate(x[index + 0]) * 2 - 0.5) / w;
-    b.y = (j + logistic_activate(x[index + 1]) * 2 - 0.5) / h;
-    b.w = logistic_activate(x[index + 2]) * logistic_activate(x[index + 2]) * 4 * biases[2*n]   / w;
-    b.h = logistic_activate(x[index + 3]) * logistic_activate(x[index + 3]) * 4 * biases[2*n+1] / h;
+    float tmp[4] = {0};
+    for (int k = 0; k < 4; k++)
+    {
+    	float sum = 0;
+    	for (int m = 0; m < 16; m++)
+    	{
+    		x[index + k * 16 + m] = exp(x[index + k * 16 + m]);
+    		sum += x[index + k * 16 + m];
+    	}
+    	for (int m = 0; m < 16; m++)
+    	{
+    		tmp[k] += m * x[index + k * 16 + m] / sum;
+    	}
+    }
+    b.x = (j + 0.5 - tmp[0]) / w;
+    b.y = (i + 0.5 - tmp[1]) / h;
+    b.w = (j + 0.5 + tmp[2]) / w;
+    b.h = (i + 0.5 + tmp[3]) / h;
+    b.w = b.w - b.x;
+    b.h = b.h - b.y;
+    b.x = b.x + b.w / 2;
+    b.y = b.y + b.h / 2;
     return b;
 }
 
@@ -228,59 +246,38 @@ static void flatten(float *x, int size, int layers, int batch, int forward)
     free(swap);
 }
 
-int yolo_v3_post_process_onescale(float *predictions, int input_size[3] , float *biases, box *boxes, float **probs, float threshold_in)
+int yolo_v3_post_process_onescale(float *predictions, int input_size[3] , box *boxes, float **probs, float threshold_in)
 {
-    int i,j;
+    int i,j,k,index;
     int num_class = 80;
-    int coords = 4;
-    int bb_size = coords + num_class + 1;
-    int num_box = input_size[2]/bb_size;
+    int coords = 64;
+    int bb_size = coords + num_class;
     int modelWidth = input_size[0];
     int modelHeight = input_size[1];
-    float threshold=threshold_in;
+    float threshold = threshold_in;
+    float max_prob;
 
-    for (j = 0; j < modelWidth*modelHeight*num_box; ++j)
+    for (j = 0; j < modelWidth*modelHeight; ++j)
         probs[j] = (float *)calloc(num_class+1, sizeof(float *));
 
-    int ck0, batch = 1;
-    flatten(predictions, modelWidth*modelHeight, bb_size*num_box, batch, 1);
-
-    for (i = 0; i < modelHeight*modelWidth*num_box; ++i) {
-        for (ck0=coords;ck0<bb_size;ck0++ ) {
-            int index = bb_size*i;
-
-            predictions[index + ck0] = logistic_activate(predictions[index + ck0]);
-            if (ck0 == coords) {
-                if (predictions[index+ck0] <= threshold) {
-                    break;
-                }
-            }
-        }
+    for (i = 0; i < modelHeight; ++i)
+    {
+    	for (j = 0; j < modelWidth; ++j)
+    	{
+    		index = i * modelHeight + j;
+    		max_prob = 0;
+    		for (k = 0; k < num_class; ++k)
+    		{
+    			float prob = logistic_activate(predictions[index * bb_size + k]);
+    			probs[index][k] = (prob > threshold) ? prob : 0;
+    			max_prob = (prob > threshold && prob > max_prob) ? prob : max_prob;
+    		}
+    		int box_index = index * bb_size + num_class;
+    		boxes[index] = get_region_box(predictions, box_index, i, j, modelWidth, modelHeight);
+    		boxes[index].prob_obj = (max_prob > threshold) ? max_prob : 0;
+    	}
     }
-
-
-    for (i = 0; i < modelWidth*modelHeight; ++i) {
-        int row = i / modelWidth;
-        int col = i % modelWidth;
-        int n =0;
-        for (n = 0; n < num_box; ++n) {
-            int index = i*num_box + n;
-            int p_index = index * bb_size + 4;
-            float scale = predictions[p_index];
-            int box_index = index * bb_size;
-            int class_index = 0;
-            class_index = index * bb_size + 5;
-
-            if (scale>threshold) {
-                for (j = 0; j < num_class; ++j) {
-                    float prob = scale*predictions[class_index+j];
-                    probs[index][j] = (prob > threshold) ? prob : 0;
-                }
-                boxes[index] = get_region_box(predictions, biases, n, box_index, col, row, modelWidth, modelHeight);
-            }
-            boxes[index].prob_obj = (scale>threshold)?scale:0;
-        }
-    }
+    
     return 0;
 }
 
@@ -294,7 +291,7 @@ void yolov3_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
     nn_height = tensor->attr.size[1];
     nn_channel = tensor->attr.size[2];
     (void)nn_channel;
-    int size[3]={nn_width/32, nn_height/32,85*3};
+    int size[3]={nn_width/32, nn_height/32, 80 + 64};
 
     int sz[10];
     int i, j, stride;
@@ -332,18 +329,17 @@ void yolov3_postprocess(vsi_nn_graph_t *graph, pDetResult resultData)
         vsi_nn_Free(tensor_data);
     }
 
-    float biases[18] = {10/8., 13/8., 16/8., 30/8., 33/8., 23/8., 30/16., 61/16., 62/16., 45/16., 59/16., 119/16., 116/32., 90/32., 156/32., 198/32., 373/32., 326/32.};
     int size2[3] = {size[0]*2,size[1]*2,size[2]};
     int size4[3] = {size[0]*4,size[1]*4,size[2]};
     int len1 = size[0]*size[1]*size[2];
-    int box1 = len1/(num_class+5);
+    int box1 = len1/(num_class+64);
 
     box *boxes = (box *)calloc(box1*(1+4+16), sizeof(box));
     float **probs = (float **)calloc(box1*(1+4+16), sizeof(float *));
 
-    yolo_v3_post_process_onescale(&predictions[0], size4, &biases[0], boxes, &probs[0], threshold); //final layer
-    yolo_v3_post_process_onescale(&predictions[len1*16], size2, &biases[6], &boxes[box1*16], &probs[box1*16], threshold);
-    yolo_v3_post_process_onescale(&predictions[len1*(16+4)], size, &biases[12],  &boxes[box1*(16+4)], &probs[box1*(16+4)], threshold);
+    yolo_v3_post_process_onescale(&predictions[0], size4, boxes, &probs[0], threshold); //final layer
+    yolo_v3_post_process_onescale(&predictions[len1*16], size2, &boxes[box1*16], &probs[box1*16], threshold);
+    yolo_v3_post_process_onescale(&predictions[len1*(16+4)], size,  &boxes[box1*(16+4)], &probs[box1*(16+4)], threshold);
     do_nms_sort(boxes, probs, box1*21, num_class, iou_threshold);
     get_detections_result(resultData, box1*21, threshold, boxes, probs, coco_names, num_class);
 

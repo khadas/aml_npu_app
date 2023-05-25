@@ -1,0 +1,55 @@
+include ./makefile.linux.def
+include ./makefile.target_name
+
+INCLUDE += -I$(VIVANTE_SDK_INC)
+INCLUDE += -I$(OVXLIB_DIR)/include
+INCLUDE += -I./include
+
+CFLAGS += $(INCLUDE) -fpic
+
+################################################################################
+LIBS += -L$(VIVANTE_SDK_LIB) -l OpenVX -l OpenVXU -lGAL
+LIBS += -L$(OVXLIB_DIR)/lib -l ovxlib
+LIBS += -lm -ldl
+
+
+#############################################################################
+# Macros.
+PROGRAM = 1
+DYNAMIC      := 1
+CUR_SOURCE = ${wildcard *.c}
+#############################################################################
+# Objects.
+OBJECTS =  ${patsubst %.c, $(OBJ_DIR)/%.o, $(CUR_SOURCE)}
+
+LDFLAGS += -Wall -shared -Wl,-soname,$(TARGET_NAME) -Wl,-z,defs -fpic
+
+# installation directory
+INSTALL_DIR := ./
+OBJ_DIR = bin_r
+################################################################################
+# Include the common makefile.
+
+#include $(AQROOT)/common.target
+
+TARGET_OUTPUT = $(OBJ_DIR)/$(TARGET_NAME)
+
+all: $(TARGET_OUTPUT)
+
+clean:
+	@rm -rf $(OBJ_DIR)/* $(OBJ_DIR)
+
+install: $(TARGET_OUTPUT)
+	@mkdir -p $(INSTALL_DIR)
+	@-cp $(TARGET_OUTPUT) $(INSTALL_DIR)
+
+$(TARGET_OUTPUT): $(OBJECTS)
+	@$(CC) $(LDFLAGS) $(OBJECTS) -o $(TARGET_OUTPUT) $(LIBS)
+
+$(OBJ_DIR)/%.o: %.c
+	@echo "  COMPILE $(abspath $<)"
+	@mkdir -p $(OBJ_DIR)
+	@$(CC) -c $(CFLAGS) -o $@ $<
+
+
+
