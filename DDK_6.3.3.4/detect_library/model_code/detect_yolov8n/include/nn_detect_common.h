@@ -91,7 +91,6 @@ typedef enum {
 	DET_DEEPLAB_V3,
         DET_FACENET,
         DET_YOLOV7_TINY,
-        DET_YOLOV8_N,
         DET_BUTT,
 } det_model_type;
 
