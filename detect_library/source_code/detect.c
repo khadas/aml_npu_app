@@ -32,6 +32,7 @@ typedef det_status_t (*network_create)(const char * data_file_path, dev_type typ
 typedef void (*network_getsize)(int *width, int *height, int *channel);
 typedef void (*network_setinput)(input_image_t imageData, uint8_t* data);
 typedef det_status_t (*network_getresult)(pDetResult resultData, uint8_t* data);
+typedef det_status_t (*network_densenet_ctc_getresult)(char* result, int* result_len, uint8_t* data);
 typedef void (*network_release)(dev_type type);
 
 typedef struct function_process {
@@ -39,6 +40,7 @@ typedef struct function_process {
 	network_getsize		model_getsize;
 	network_setinput	model_setinput;
 	network_getresult	model_getresult;
+	network_densenet_ctc_getresult	densenet_ctc_model_getresult;
 	network_release		model_release;
 }network_process;
 
@@ -69,6 +71,7 @@ const char * so_file_name[DET_BUTT]= {
 	"libnn_facenet.so",
 	"libnn_yolo_v7_tiny.so",
 	"libnn_yolo_v8n.so",
+	"libnn_densenet_ctc.so",
 };
 
 static det_status_t check_input_param(input_image_t imageData, det_model_type modelType)
@@ -179,6 +182,13 @@ det_status_t check_and_set_function(det_model_type modelType)
 
 	net->process.model_getresult = (network_getresult)dlsym(net->handle_id, "model_getresult");
 	_CHECK_STATUS_(net->process.model_getresult, exit);
+	
+	if (modelType == 15)
+	{
+		net->process.densenet_ctc_model_getresult = (network_densenet_ctc_getresult)dlsym(net->handle_id, "densenet_ctc_model_getresult");
+		_CHECK_STATUS_(net->process.densenet_ctc_model_getresult, exit);
+	}
+
 
 	net->process.model_release = (network_release)dlsym(net->handle_id, "model_release");
 	_CHECK_STATUS_(net->process.model_release, exit);
@@ -284,6 +294,29 @@ det_status_t det_get_result(pDetResult resultData, det_model_type modelType)
 	}
 
 	ret = net->process.model_getresult(resultData, net->input_ptr);
+	if (ret) {
+		LOGE("Process Net work fail");
+		_SET_STATUS_(ret, DET_STATUS_PROCESS_NETWORK_FAIL, exit);
+	}
+	net->status = NETWORK_INIT;
+
+exit:
+	LOGP("Leave, modeltype:%d", modelType);
+	return ret;
+}
+
+det_status_t densenet_ctc_get_result(char* result, int* result_len, det_model_type modelType)
+{
+	LOGP("Enter, modeltype:%d", modelType);
+
+	int ret = DET_STATUS_OK;
+	p_det_network_t net = &network[modelType];
+	if (NETWORK_PREPARING != net->status) {
+		LOGE("Model not create or not prepared! status=%d", net->status);
+		_SET_STATUS_(ret, DET_STATUS_ERROR, exit);
+	}
+
+	ret = net->process.densenet_ctc_model_getresult(result, result_len, net->input_ptr);
 	if (ret) {
 		LOGE("Process Net work fail");
 		_SET_STATUS_(ret, DET_STATUS_PROCESS_NETWORK_FAIL, exit);
