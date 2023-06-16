@@ -92,7 +92,6 @@ typedef enum {
         DET_FACENET,
         DET_YOLOV7_TINY,
         DET_YOLOV8_N,
-        DET_DENSENET_CTC,
         DET_RETINAFACE,
         DET_BUTT,
 } det_model_type;
