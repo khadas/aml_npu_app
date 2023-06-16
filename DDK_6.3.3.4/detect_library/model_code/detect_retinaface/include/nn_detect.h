@@ -11,7 +11,6 @@ det_status_t det_set_model(det_model_type modelType);     ///<set network type,t
 det_status_t det_get_model_size(det_model_type modelType, int *width, int *height, int *channel);
 det_status_t det_set_input(input_image_t imageData, det_model_type modelType);      ///<set input image to network
 det_status_t det_get_result(pDetResult resultData, det_model_type modelType);       ///<get detection result,this will block until process end
-det_status_t densenet_ctc_get_result(char* result, int* result_len, det_model_type modelType);       ///<get detection result,this will block until process end
 det_status_t det_release_model(det_model_type modelType);       ///<get detection result,this will block until process end
 det_status_t det_set_log_config(det_debug_level_t level,det_log_format_t output_format);  ///<set log config
 
